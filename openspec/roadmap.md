@@ -196,7 +196,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
     - `implementacion.md`: expected vs existing sets, interval grouping, window and Feb 29.
   - Depends on: bridge
 
-- [ ] `bands-stats` — Time-of-day bands, diurnal profile and descriptive statistics
+- [x] `bands-stats` — Time-of-day bands, diurnal profile and descriptive statistics
   - Acceptance:
     - Bands per local day and variable with the locked rule; night band (00-02 UTC next day) assigned
       to the correct local day.
