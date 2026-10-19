@@ -2,6 +2,7 @@ package co.climamedellin.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.persistence.PersistenceException;
 
 import java.io.PrintStream;
 
@@ -40,10 +41,41 @@ public final class Main {
                     "Falta el subcomando. Uso: java -jar clima-medellin.jar <subcomando> [opciones]");
         }
         String command = args[0];
-        switch (command) {
-            default:
-                return fail(out, EXIT_USAGE, "USAGE", "Subcomando desconocido: " + command);
+        try {
+            ObjectNode response = switch (command) {
+                case "import" -> ImportCommand.run(Options.parse(args, ImportCommand.OPTIONS), err);
+                case "coverage" ->
+                        CoverageCommand.run(Options.parse(args, CoverageCommand.OPTIONS), err);
+                case "export" -> ExportCommand.run(Options.parse(args, ExportCommand.OPTIONS), err);
+                default -> throw new UsageException("Subcomando desconocido: " + command);
+            };
+            return succeed(out, response);
+        } catch (UsageException e) {
+            return fail(out, EXIT_USAGE, "USAGE", e.getMessage());
+        } catch (DataException e) {
+            return fail(out, EXIT_DATA, "DATA", e.getMessage());
+        } catch (PersistenceException e) {
+            e.printStackTrace(err);
+            return fail(out, EXIT_DATABASE, "DATABASE",
+                    "No se pudo usar la base de datos: " + firstLine(e.getMessage()));
+        } catch (RuntimeException e) {
+            e.printStackTrace(err);
+            return fail(out, EXIT_UNEXPECTED, "UNEXPECTED",
+                    e.getClass().getSimpleName() + ": " + firstLine(e.getMessage()));
         }
+    }
+
+    /** Escribe en stdout la respuesta de éxito con "ok": true como primer campo. */
+    static int succeed(PrintStream out, ObjectNode body) {
+        ObjectNode response = MAPPER.createObjectNode();
+        response.put("ok", true);
+        response.setAll(body);
+        out.println(response.toString());
+        return EXIT_OK;
+    }
+
+    private static String firstLine(String message) {
+        return message == null ? "" : message.lines().findFirst().orElse("");
     }
 
     /** Escribe en stdout el sobre JSON de error y devuelve el código de salida. */

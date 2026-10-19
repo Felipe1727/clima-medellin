@@ -51,7 +51,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [1. Punto de entrada del JAR y contrato de salida](#1-punto-de-entrada-del-jar-y-contrato-de-salida) | Disponible | `project-scaffold` |
 | [2. ObjectDB: entidades, transacciones, inserción y consultas JPQL](#2-objectdb-entidades-transacciones-inserción-y-consultas-jpql) | Disponible | `persistence` |
 | [3. Descarga de Open-Meteo y normalización con Pandas](#3-descarga-de-open-meteo-y-normalización-con-pandas) | Disponible | `ingest` |
-| 4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python | Pendiente | `bridge` |
+| [4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python](#4-puente-javapython-subprocesos-json-lines-y-de-objectdb-a-python) | Disponible | `bridge` |
 | 5. Ventana móvil, cobertura e intervalos faltantes | Pendiente | `coverage` |
 | 6. Zonas horarias, franjas y estadística descriptiva | Pendiente | `bands-stats` |
 | 7. Unión de datos, split temporal y regresión | Pendiente | `regression` |
@@ -573,3 +573,209 @@ s = s.where(valido)                      # donde valido es False, pone NaN
 Ejemplo real con la muestra anual de ERA5 descargada el 2026-10-18: llegan 8 760 horas, 96 están en o después del fin efectivo (00:00 UTC del 2026-10-14) y quedan **8 664 filas**, todas con datos.
 
 **Cuidado.** Rellenar los huecos con 0 (`fillna(0)`) haría que una hora sin viento medido pareciera una hora de calma total, y bajaría la media del viento.
+
+---
+
+## 4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python
+
+Python nunca abre el archivo `.odb` (D-002): le pide a Java cada operación ejecutando el JAR como **proceso hijo**. El lado Java está en `java/src/main/java/co/climamedellin/cli/` (`Main`, `Options`, `ImportCommand`, `CoverageCommand`, `ExportCommand`, `JsonLines`) y el lado Python en `python/src/clima_medellin/bridge.py` y `jsonlines.py`.
+
+```text
+ Python (bridge.py)                                Java (clima-medellin.jar)
+ ------------------                                -------------------------
+ DataFrame --write_frame--> staging/ERA5-...jsonl
+ subprocess.run(["java","-jar",...,"import",...]) --> ImportCommand: valida, RecordStore.insert...
+                 <-- stdout: {"ok":true,"inserted":744,...}   código 0
+ subprocess.run([... "export" ...])               --> ExportCommand: findWeather(...) --> exchange/export-ERA5.jsonl
+                 <-- stdout: {"ok":true,"file":...,"lines":744}
+ read_frame(exchange/export-ERA5.jsonl) --> DataFrame
+```
+
+### 4.1 Ejecutar el JAR como proceso hijo con `subprocess`
+
+**Concepto.** Un **proceso hijo** es otro programa que Python lanza y espera. Se comunican por tres canales: los **argumentos** (lo que Python le pide), **stdout** (la respuesta, un único JSON) y **stderr** (mensajes de registro), más el **código de salida** (0 = éxito). `subprocess.run` con `capture_output=True` guarda stdout y stderr en lugar de mostrarlos.
+
+**Sintaxis básica.**
+
+```python
+import subprocess
+
+r = subprocess.run(["java", "-version"], capture_output=True, text=True)
+print(r.returncode)   # 0
+print(r.stderr)       # java -version escribe en stderr
+```
+
+Los argumentos se pasan como **lista**, no como una cadena para la shell: así un valor con espacios o comillas (por ejemplo, el JSON de `--meta`) llega intacto.
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/bridge.py -->
+```python
+        command = [
+            self.java,
+            # Silencia el aviso de sun.misc.Unsafe que ObjectDB provoca en Java 25.
+            "--sun-misc-unsafe-memory-access=allow",
+            "-jar",
+            str(self.jar),
+            *args,
+        ]
+        completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
+        if self.verbose and completed.stderr:
+            print(completed.stderr, end="", file=sys.stderr)
+        lines = completed.stdout.strip().splitlines()
+```
+
+- `*args` añade el subcomando y sus opciones, por ejemplo `"export", "--db", "data/clima.odb", "--location", "MED-CENTRO", ...`.
+- `encoding="utf-8"` garantiza que las tildes de los mensajes de Java (`«Línea 2: no es un JSON válido»`) lleguen bien.
+- En modo detallado (`verbose=True`) el stderr de Java se reenvía al stderr de Python; si no, se oculta.
+
+**Cuidado.** Lanzar el JAR con `shell=True` y una sola cadena obligaría a escapar las comillas del JSON de `--meta`; con una lista no hace falta.
+
+### 4.2 El contrato: un JSON por stdout y un código de salida
+
+**Concepto.** El JAR responde siempre con **un único objeto JSON en una línea** de stdout y termina con un código que clasifica el resultado (DP-05). Python primero interpreta el JSON y después mira el código para decidir si es un éxito o un error y qué mensaje mostrar.
+
+**Sintaxis básica.**
+
+```python
+import json
+respuesta = json.loads('{"ok": false, "error": {"type": "DATA", "message": "Línea 2: ..."}}')
+respuesta["error"]["type"]   # 'DATA'
+```
+
+**En este proyecto (Java).** `Main` traduce cada tipo de excepción a un código:
+
+<!-- fragmento: java/src/main/java/co/climamedellin/cli/Main.java -->
+```java
+        } catch (UsageException e) {
+            return fail(out, EXIT_USAGE, "USAGE", e.getMessage());
+        } catch (DataException e) {
+            return fail(out, EXIT_DATA, "DATA", e.getMessage());
+        } catch (PersistenceException e) {
+            e.printStackTrace(err);
+            return fail(out, EXIT_DATABASE, "DATABASE",
+                    "No se pudo usar la base de datos: " + firstLine(e.getMessage()));
+        } catch (RuntimeException e) {
+            e.printStackTrace(err);
+            return fail(out, EXIT_UNEXPECTED, "UNEXPECTED",
+                    e.getClass().getSimpleName() + ": " + firstLine(e.getMessage()));
+        }
+```
+
+**En este proyecto (Python).** `bridge.py` exige una sola línea y traduce el código:
+
+<!-- fragmento: python/src/clima_medellin/bridge.py -->
+```python
+        if completed.returncode != 0:
+            error = response.get("error", {})
+            text = EXIT_MESSAGES.get(completed.returncode, "Error del JAR")
+            raise BridgeError(
+                f"{text}: {error.get('message', '')}",
+                exit_code=completed.returncode,
+                error_type=error.get("type"),
+            )
+        return response
+```
+
+| Código | `error.type` | Cuándo | Mensaje en Python |
+|---|---|---|---|
+| 0 | — | Éxito (los duplicados omitidos no son error) | — |
+| 1 | `USAGE` | Subcomando u opción desconocidos, opción sin valor, fuente inválida | «Error de uso del JAR…» |
+| 2 | `DATA` | Archivo inexistente, línea que no es JSON, timestamp sin `Z`, valor no numérico, fuente distinta | «El lote tiene datos inválidos: Línea N…» |
+| 3 | `DATABASE` | La base no se puede abrir (por ejemplo, otro proceso la tiene abierta) o falla una transacción | «No se pudo usar la base de datos; cierra otras ejecuciones…» |
+| 4 | `UNEXPECTED` | Cualquier otro error | «Error inesperado en el programa Java…» |
+
+Las trazas de las excepciones (`printStackTrace(err)`) van a stderr: solo se ven en modo detallado.
+
+**Cuidado.** El caso 3 no es teórico: se comprobó que, si un proceso tiene el `.odb` abierto, un segundo proceso falla de inmediato con «Attempt to open a database file … that is currently in use by another process» (PV-15). Por eso la aplicación asume una sola ejecución a la vez.
+
+### 4.3 JSON Lines: un registro por línea
+
+**Concepto.** **JSON Lines** es un archivo de texto en el que **cada línea es un objeto JSON completo** (D-004). Se puede leer y validar línea a línea, un error indica su número de línea exacto y los ausentes se escriben como `null` (algo que CSV no distingue de una celda vacía).
+
+**Sintaxis básica.**
+
+```text
+{"location_code":"MED-CENTRO","source":"ERA5","timestamp_utc":"2026-03-01T13:00:00Z","temperature_2m_c":21.4,"relative_humidity_2m_pct":78.0,"wind_speed_10m_ms":null}
+{"location_code":"MED-CENTRO","source":"ERA5","timestamp_utc":"2026-03-01T14:00:00Z","temperature_2m_c":22.0,"relative_humidity_2m_pct":75.0,"wind_speed_10m_ms":1.25}
+```
+
+**En este proyecto (Python escribe).**
+
+<!-- fragmento: python/src/clima_medellin/jsonlines.py -->
+```python
+        for ts, row in zip(frame.index, frame[columns].itertuples(index=False), strict=True):
+            record = {
+                "location_code": location_code,
+                "source": source,
+                "timestamp_utc": _format_timestamp(ts),
+            }
+            for column, value in zip(columns, row, strict=True):
+                record[column] = None if value is None or math.isnan(value) else float(value)
+            out.write(json.dumps(record, ensure_ascii=False) + "\n")
+```
+
+- `_format_timestamp` produce `2026-03-01T13:00:00Z`: UTC con sufijo `Z`, el formato que Java acepta con `Instant.parse`.
+- `math.isnan(value)` detecta los `NaN` de Pandas y los escribe como `None`, que `json.dumps` convierte en `null`.
+
+**En este proyecto (Java valida antes de escribir).** `JsonLines.read` lee **todas** las líneas y comprueba cada una (JSON válido, campos conocidos, fuente y ubicación correctas, timestamp con `Z`, valores numéricos o `null`). Solo si todo el archivo es válido, `ImportCommand` abre la base:
+
+<!-- fragmento: java/src/main/java/co/climamedellin/cli/ImportCommand.java -->
+```java
+        // Primero se valida el archivo entero; la base solo se abre si todo es correcto.
+        List<JsonLines.Row> rows = JsonLines.read(options.path("file"), source,
+                locationData.code());
+        err.println("[import] " + rows.size() + " líneas válidas de " + source);
+
+        try (Database database = Database.open(options.db())) {
+```
+
+**Cuidado.** Validar línea a línea mientras se inserta dejaría la base a medias si la línea 5 000 estuviera rota; validar primero garantiza «todo o nada» a nivel de archivo.
+
+### 4.4 El camino completo de ObjectDB a Python
+
+**Concepto.** Para analizar, Python necesita los datos de la base como DataFrame. Pide a Java una **exportación** de un rango: Java consulta ObjectDB con JPQL (sección 2.6), escribe un JSON Lines en `exchange/` y responde con la ruta; Python lo lee con Pandas.
+
+**Sintaxis básica.**
+
+```python
+bridge = JavaBridge()                                  # base en data/clima.odb
+tabla = bridge.export("ERA5", inicio_utc, fin_utc)     # DataFrame indexado por timestamp_utc
+```
+
+**En este proyecto (Java escribe una línea por registro).**
+
+<!-- fragmento: java/src/main/java/co/climamedellin/cli/ExportCommand.java -->
+```java
+            List<ObjectNode> lines = source == Source.ERA5
+                    ? store.findWeather(code, from, to).stream().map(JsonLines::line).toList()
+                    : store.findAirQuality(code, from, to).stream().map(JsonLines::line).toList();
+            int written = JsonLines.write(out, lines);
+```
+
+**En este proyecto (Python lo lee como DataFrame).**
+
+<!-- fragmento: python/src/clima_medellin/jsonlines.py -->
+```python
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    extra = ["batch_id"] if records and "batch_id" in records[0] else []
+    index = pd.DatetimeIndex(
+        pd.to_datetime([r["timestamp_utc"] for r in records], utc=True), name="timestamp_utc"
+    )
+    data = {c: [r.get(c) for r in records] for c in columns + extra}
+    frame = pd.DataFrame(data, index=index)
+    frame[columns] = frame[columns].astype(float)
+```
+
+- Cada línea exportada lleva también `batch_id`, el lote que insertó el registro (procedencia).
+- `astype(float)` convierte los `None` en `NaN`.
+- La prueba `test_round_trip_is_identical` importa una semana real de ERA5 (con un viento a `null`), la exporta y comprueba con `assert_frame_equal` que vuelve **idéntica**: mismos timestamps, mismos valores (sin errores de redondeo) y el mismo nulo.
+
+**Ciclo de vida de los archivos.**
+
+| Carpeta | Quién escribe | Nombre | Qué pasa después |
+|---|---|---|---|
+| `staging/` | Python | `<fuente>-<AAAAmmddTHHMMSSffffff>.jsonl` (único por lote) | Se borra si la importación termina con código 0; si falla se conserva y su ruta aparece en el error |
+| `exchange/` | Java | `export-<fuente>.jsonl`, `coverage-<fuente>.jsonl` (nombre fijo) | Se sobrescribe en cada llamada; nunca se borra automáticamente |
+
+**Cuidado.** Un lote fallido en `staging/` es una pista, no basura: abrirlo con un editor muestra la línea exacta que Java rechazó.

@@ -12,7 +12,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 1 | Validación de las APIs | [x] | 0 |
 | 2 | Modelo de datos y persistencia en ObjectDB | [x] | 0 |
 | 3 | Ingesta y normalización en Python | [x] | 1 |
-| 4 | Puente Java↔Python | [ ] | 2, 3 |
+| 4 | Puente Java↔Python | [x] | 2, 3 |
 | 5 | Cobertura histórica e incrementos | [ ] | 4 |
 | 6 | Franjas horarias y estadística descriptiva | [ ] | 5 |
 | 7 | Regresión lineal y evaluación | [ ] | 6 |
@@ -143,11 +143,11 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** implementar el protocolo de [arquitectura.md](arquitectura.md#protocolo-de-comunicación) y demostrar una ida y vuelta completa sin pérdida de información.
 
 **Entregables:**
-- [ ] JAR con los subcomandos `coverage`, `import` y `export`.
-- [ ] Formato JSON Lines definitivo para `staging/` y `exchange/`.
-- [ ] Tabla de códigos de salida definitiva (DP-05).
-- [ ] Política de limpieza de `staging/` y `exchange/`.
-- [ ] Prueba de ida y vuelta: DataFrame → `staging/` → `import` → `export` → `exchange/` → DataFrame idéntico.
+- [x] JAR con los subcomandos `coverage`, `import` y `export` ([arquitectura.md](arquitectura.md#subcomandos)).
+- [x] Formato JSON Lines definitivo para `staging/` y `exchange/`.
+- [x] Tabla de códigos de salida definitiva (DP-05).
+- [x] Política de limpieza de `staging/` y `exchange/`.
+- [x] Prueba de ida y vuelta: DataFrame → `staging/` → `import` → `export` → `exchange/` → DataFrame idéntico (`python/tests/test_bridge.py`).
 
 **Conceptos que se estudiarán:**
 - *Procesos hijo, stdout, stderr y código de salida*: el contrato entre dos programas.
@@ -162,9 +162,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fases 2 y 3.
 
-**Decisiones abiertas:** DP-05; PV-15 (bloqueo del archivo).
+**Decisiones abiertas:** DP-05 (resuelta); PV-15 resuelto.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 
@@ -336,11 +336,11 @@ Todas se resolvieron en la sesión de exploración del 2026-10-18, con los resul
 | PV-12 | Si CAMS usa meteorología del ECMWF (IFS) como entrada | [regresion.md](regresion.md) | Fase 1 | Resuelto: sí, CAMS se ejecuta con el IFS |
 | PV-13 | Índice único compuesto que incluya una relación con Location | [arquitectura.md](arquitectura.md) | Fase 2 | Resuelto: el índice admite la relación con Location |
 | PV-14 | Tipo temporal de Java admitido por ObjectDB para timestamps UTC | [arquitectura.md](arquitectura.md) | Fase 2 | Resuelto: `java.time.Instant`, exacto en cualquier zona horaria |
-| PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
+| PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 | Resuelto: el segundo proceso falla de inmediato (código 3) |
 | PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 | Resuelto: UTC−5 en todas las horas de 2025 y 2026 |
 | PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 | Resuelto: Python 3.14.7, pandas 3.0.6, scikit-learn 1.9.1, statsmodels 0.15.0, Matplotlib 3.11.2, requests 2.34.2 |
 | PV-18 | Comportamiento de Matplotlib sin entorno gráfico | [cli-y-visualizaciones.md](cli-y-visualizaciones.md) | Fase 8 | Pendiente |
-| PV-19 | Formato de `coverage` (lista de timestamps o intervalos) y argumentos de los subcomandos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
+| PV-19 | Formato de `coverage` (lista de timestamps o intervalos) y argumentos de los subcomandos | [arquitectura.md](arquitectura.md) | Fase 4 | Resuelto: resumen por stdout y timestamps en `exchange/` |
 
 ## Limitaciones y supuestos
 
