@@ -18,7 +18,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 7 | Regresión lineal y evaluación | [x] | 6 |
 | 8 | Visualizaciones | [x] | 6, 7 |
 | 9 | CLI integrada, pruebas finales y defensa | [x] | 1–8 |
-| 10 | Modelos de calendario y CLI mejorada | [~] | 9 |
+| 10 | Modelos de calendario y CLI mejorada | [x] | 9 |
 
 Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
@@ -307,7 +307,7 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Entregables:**
 - [x] Tres modelos de calendario evaluados frente a su línea base, con peticiones de predicción (`python/src/clima_medellin/calendar_models.py`, D-024; resultados en [regresion.md](regresion.md#modelos-de-calendario)).
 - [x] Interfaz con colores, tablas y explicaciones en lenguaje sencillo (D-025; `ui.py` y `menu.py`).
-- [ ] Opción de predicción, pantalla de evaluación de los modelos y gráfica del efecto de cada hora.
+- [x] Opción de predicción, pantalla de evaluación de los cuatro modelos y gráfica del efecto de cada hora (`menu.py`, `plots.py`).
 
 **Conceptos que se estudiarán:**
 - *Codificación one-hot*: representar categorías (las horas) como columnas 0/1.
@@ -319,7 +319,7 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 9.
 
-**Estado:** [~] en curso.
+**Estado:** [x] completada.
 
 ---
 

@@ -13,6 +13,7 @@ Proyecto universitario para la asignatura de **Bases de Datos**. Es una aplicaci
 - Guarda los datos en ObjectDB con su procedencia (qué descarga aportó cada valor).
 - Calcula estadísticas descriptivas, el perfil diurno y franjas de mañana, tarde y noche (hora de Medellín).
 - Entrena y evalúa una regresión lineal de PM2.5 a partir de temperatura, humedad y viento.
+- Predice la temperatura, la humedad y el PM2.5 típicos para una hora, un día o un rango de fechas con tres modelos de calendario (hora del día y época del año), indicando su error típico.
 - Genera gráficas en una ventana o como PNG.
 
 ## Qué NO hace
@@ -24,7 +25,7 @@ Proyecto universitario para la asignatura de **Bases de Datos**. Es una aplicaci
 
 ## Estado actual
 
-**Implementado.** Las fases 0 a 9 de [docs/fases.md](docs/fases.md) están completas: descarga incremental, persistencia en ObjectDB, cobertura, franjas, estadísticas, regresión, gráficas y el menú de 7 opciones, con pruebas automáticas (JUnit y pytest) e integración continua. La guía técnica del código está en [docs/implementacion.md](docs/implementacion.md); el orden de implementación, en [openspec/roadmap.md](openspec/roadmap.md).
+**Implementado.** Las fases 0 a 10 de [docs/fases.md](docs/fases.md) están completas: descarga incremental, persistencia en ObjectDB, cobertura, franjas, estadísticas, regresión, modelos de calendario para predecir temperatura, humedad y PM2.5, gráficas y un menú en lenguaje sencillo, con pruebas automáticas (JUnit y pytest) e integración continua. La guía técnica del código está en [docs/implementacion.md](docs/implementacion.md); el orden de implementación, en [openspec/roadmap.md](openspec/roadmap.md).
 
 ## Instalación
 
@@ -74,7 +75,9 @@ uv run clima-medellin --verbose  # igual, mostrando también los mensajes del JA
 Elige una opción (0-7):
 ```
 
-Primer uso: elige **2 Descargar los datos que faltan** y confirma con `s`; la carga inicial de un año son dos peticiones a Open-Meteo (unos segundos). Después, las demás opciones trabajan con los datos guardados en `data/clima.odb`, y las gráficas en PNG se guardan en `outputs/`. Cada pantalla termina con un panel «Qué significa» que explica los resultados en lenguaje sencillo. Cada opción está descrita en [docs/cli-y-visualizaciones.md](docs/cli-y-visualizaciones.md).
+Primer uso: elige **2 Descargar los datos que faltan** y confirma con `s`; la carga inicial de un año son dos peticiones a Open-Meteo (unos segundos). Después, las demás opciones trabajan con los datos guardados en `data/clima.odb`, y las gráficas en PNG se guardan en `outputs/`. Cada pantalla termina con un panel «Qué significa» que explica los resultados en lenguaje sencillo.
+
+Para predecir, elige **6** y escribe una fecha (`2026-11-03`: las 24 horas de ese día), una hora (`2026-11-03 15:00`) o un rango (Desde `2026-11-03`, Hasta `2026-11-05`). Se muestran la temperatura, la humedad y el PM2.5 típicos de esas horas con su error típico y, si ya hay datos guardados para ellas, el valor real. Son valores típicos según la hora y la época del año, no un pronóstico del tiempo. Cada opción está descrita en [docs/cli-y-visualizaciones.md](docs/cli-y-visualizaciones.md).
 
 Solo puede haber una ejecución a la vez: ObjectDB no permite que dos procesos abran la misma base.
 

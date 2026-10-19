@@ -8,7 +8,7 @@
 
 ## 2. Documentación
 
-- [ ] 2.1 Actualizar `docs/cli-y-visualizaciones.md` (opciones 5, 6 y 7, gráficas nuevas), la sección 12 de `docs/implementacion.md` con fragmentos reales, el uso en `README.md` y la Fase 10 completada en `docs/fases.md`; verificar con `uv run pytest`
+- [x] 2.1 Actualizar `docs/cli-y-visualizaciones.md` (opciones 5, 6 y 7, gráficas nuevas), la sección 12 de `docs/implementacion.md` con fragmentos reales, el uso en `README.md` y la Fase 10 completada en `docs/fases.md`; verificar con `uv run pytest`
 - [ ] 2.2 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

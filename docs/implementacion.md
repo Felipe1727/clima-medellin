@@ -2,7 +2,7 @@
 
 Este documento explica **cómo está construido el código**: las llamadas a ObjectDB, la inserción y la consulta de datos, los *joins*, el envío de datos de ObjectDB a Python, el análisis y las gráficas. Complementa a [arquitectura.md](arquitectura.md), que explica el **qué** y el **porqué**; aquí se explica el **cómo**, con ejemplos.
 
-El documento se escribe a medida que se construye cada parte (una sección por especificación del proyecto).
+El documento se escribió a medida que se construía cada parte (una sección por especificación del proyecto) y cubre las diez fases de implementación.
 
 ## Cómo leer este documento
 
@@ -59,7 +59,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [9. Menú de la CLI](#9-menú-de-la-cli) | Disponible | `cli-integration` |
 | [10. Modelos de calendario: one-hot y rasgos cíclicos](#10-modelos-de-calendario-one-hot-y-rasgos-cíclicos) | Disponible | `calendar-models` |
 | [11. Interfaz de terminal con rich](#11-interfaz-de-terminal-con-rich) | Disponible | `cli-ux` |
-| 12. Pantalla de predicción | Pendiente | `prediction-menu` |
+| [12. Pantalla de predicción](#12-pantalla-de-predicción) | Disponible | `prediction-menu` |
 
 ---
 
@@ -1395,6 +1395,8 @@ matplotlib.use("Agg")          # forzar el backend de archivo (lo hacen las prue
 | `seam_diagnostic` | Salto medio de PM2.5 por hora UTC, con 00 y 12 UTC destacadas | ¿Hay saltos artificiales por los empalmes del pronóstico? |
 | `actual_vs_predicted` | Real frente a predicho (con y = x) y las dos series en el tiempo | ¿Cuánto se acerca el modelo y dónde falla? |
 | `residuals` | Residuos frente a predichos, en el tiempo (con Durbin-Watson) e histograma | ¿Queda un patrón que el modelo no captura? |
+| `hour_effects` | Efecto de cada hora frente a la medianoche en los tres modelos de calendario | ¿Cómo es el día típico de cada variable? |
+| `prediction_chart` | Predicción de un rango con banda de ± error típico y valores reales | ¿Cuándo se salió el día real de lo típico? |
 
 Con las muestras, el diagnóstico de empalmes muestra barras de 7,4 µg/m³ (00 UTC) y 5,6 µg/m³ (12 UTC) frente a menos de 2,6 en el resto de horas, y la gráfica de real frente a predicho deja ver que el modelo no alcanza los picos de PM2.5 del periodo de prueba ([regresion.md](regresion.md#resultado-con-las-muestras)).
 
@@ -1656,3 +1658,45 @@ consola.input("Elige una opción (0-7): ")                   # pregunta y lee la
 - La descarga y la generación de gráficas usan `rich.progress.Progress`. La barra solo se dibuja en una terminal real (`disable=not console.is_terminal`); además se escribe una línea `[…] Descargando … (1/2)` por petición, que sí queda en las pruebas y en los registros.
 - La cabecera muestra el estado de la base («al día», «incompleta», «vacía») con su color y una sugerencia. Para no arrancar dos JVM cada vez que se muestra el menú, el estado se calcula una vez y se vuelve a calcular solo después de descargar datos.
 
+
+---
+
+## 12. Pantalla de predicción
+
+La opción 6 del menú (`predict_values` en `python/src/clima_medellin/menu.py`) une los modelos de calendario (sección 10) con la interfaz de `rich` (sección 11). La prueba `test_predictions_and_model_evaluation` la recorre con un día pasado, una hora futura, un rango de 3 días, una fecha imposible y un rango demasiado largo.
+
+### 12.1 De la petición a la tabla
+
+<!-- fragmento: python/src/clima_medellin/menu.py -->
+```python
+        start = self.input("Desde (ej. 2026-11-03 o 2026-11-03 15:00): ")
+        end = self.input("Hasta (Enter = solo esa fecha u hora; ej. 2026-11-05): ")
+        win = cov.window(self.today())
+        try:
+            hours = request_hours(start, end, win, self.today())
+        except PredictionRequestError as exc:
+            self.print(ui.error(str(exc)))
+            return
+        frame = load_window(self.bridge, win)
+        models = fit_calendar_models(frame, temporal_split(win))
+        table = predict(models, hours, frame)
+        has_real = bool(table.xs("real", axis=1, level=1).notna().any().any())
+```
+
+- Cada pregunta muestra un ejemplo; un formato inválido o un límite superado (`PredictionRequestError`) se explica como `[ERROR]` y se vuelve al menú, por ejemplo «El rango abarca 1 080 horas; el máximo es 31 días (744 horas).».
+- Los tres modelos se ajustan con los datos de la ventana cada vez (una fracción de segundo): no se guardan (D-024).
+- `predict(models, hours, frame)` añade el valor real y la diferencia en las horas que tienen dato guardado. `table.xs("real", axis=1, level=1)` selecciona, de la tabla con columnas de dos niveles `(variable, prediccion|real|diferencia)`, solo las columnas «real» de las tres variables.
+
+### 12.2 Qué se muestra
+
+| Petición | Pantalla |
+|---|---|
+| Hasta 2 días (48 horas) | Tabla hora a hora: valor típico de cada variable y, si hay datos guardados, valor real y diferencia; última fila con el error típico (±) de cada modelo |
+| Más de 2 días | Resumen diario (media y rango del valor típico, y la media real si existe), tabla hora a hora bajo petición (`[s/N]`, en páginas de 24 horas) y gráfica de la predicción en ventana o PNG |
+| Siempre | Panel «Qué significa»: son valores típicos, no un pronóstico; error típico de cada modelo; y, si hay datos reales, la diferencia media observada |
+
+La gráfica de la predicción (`plots.prediction_chart`) dibuja, por variable, la línea del valor típico, una banda de ± error típico y, cuando existen, los valores reales: así se ve de un vistazo cuándo el día real se salió de lo típico.
+
+### 12.3 La opción 5 con los cuatro modelos
+
+La opción 5 empieza con una tabla de cuatro filas (temperatura, humedad y PM2.5 de calendario, y PM2.5 a partir del clima), cada una con su error típico, el de su línea base, la mejora en % y el R². Con las muestras: temperatura 1,03 frente a 2,22 °C (mejora del 53 %), humedad 6,66 frente a 10,54 % (37 %), PM2.5 de calendario 4,01 frente a 6,09 µg/m³ (34 %) y PM2.5 a partir del clima 5,72 frente a 6,10 µg/m³ (6 %). Después sigue el detalle de la regresión con el clima (coeficientes, VIF, Durbin-Watson), como antes. La opción 7 añade la gráfica «efecto de cada hora» (`plots.hour_effects`): 14 gráficas en total.
