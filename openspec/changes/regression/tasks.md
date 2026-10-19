@@ -7,8 +7,8 @@
 
 ## 2. Documentación
 
-- [ ] 2.1 Escribir la sección 7 de `docs/implementacion.md` (unión y nulos, split, Pipeline, métricas, coeficientes en unidades originales, VIF y Durbin-Watson) con fragmentos reales; verificar con `uv run pytest`
-- [ ] 2.2 Dejar `docs/regresion.md` en su versión final (decisiones, plantilla de interpretación, limitación de los empalmes y resultado con las muestras), marcar la Fase 7 en `docs/fases.md` y actualizar D-017 a D-020 en `docs/decisiones.md`; verificar que no quedan decisiones de la Fase 7 pendientes
+- [x] 2.1 Escribir la sección 7 de `docs/implementacion.md` (unión y nulos, split, Pipeline, métricas, coeficientes en unidades originales, VIF y Durbin-Watson) con fragmentos reales; verificar con `uv run pytest`
+- [x] 2.2 Dejar `docs/regresion.md` en su versión final (decisiones, plantilla de interpretación, limitación de los empalmes y resultado con las muestras), marcar la Fase 7 en `docs/fases.md` y actualizar D-017 a D-020 en `docs/decisiones.md`; verificar que no quedan decisiones de la Fase 7 pendientes
 - [ ] 2.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

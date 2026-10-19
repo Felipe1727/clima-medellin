@@ -54,7 +54,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python](#4-puente-javapython-subprocesos-json-lines-y-de-objectdb-a-python) | Disponible | `bridge` |
 | [5. Ventana móvil, cobertura e intervalos faltantes](#5-ventana-móvil-cobertura-e-intervalos-faltantes) | Disponible | `coverage` |
 | [6. Zonas horarias, franjas y estadística descriptiva](#6-zonas-horarias-franjas-y-estadística-descriptiva) | Disponible | `bands-stats` |
-| 7. Unión de datos, split temporal y regresión | Pendiente | `regression` |
+| [7. Unión de datos, split temporal y regresión](#7-unión-de-datos-split-temporal-y-regresión) | Disponible | `regression` |
 | 8. Gráficas con Matplotlib | Pendiente | `visualizations` |
 | 9. Menú de la CLI | Pendiente | `cli-integration` |
 
@@ -1113,3 +1113,138 @@ s.median()         # 50.5
 - `describe_bands` hace lo mismo por franja: la media de las franjas válidas y el número de **días válidos**, para saber en cuántos días se apoya cada media.
 
 **Cuidado.** `nulos` cuenta los valores nulos de las filas presentes; las horas que no tienen ningún registro no aparecen aquí: las informa la cobertura (sección 5).
+
+---
+
+## 7. Unión de datos, split temporal y regresión
+
+El código está en `python/src/clima_medellin/regression.py` y reutiliza `dataset.py` y `split.py` (sección 6). Lo que se puede y no se puede concluir está en [regresion.md](regresion.md). Las pruebas (`test_regression.py`) usan datos sintéticos con coeficientes conocidos.
+
+### 7.1 El conjunto de la regresión: unión interna y sin nulos
+
+**Concepto.** La regresión necesita, para cada hora, el PM2.5 **y** las tres predictoras. Se parte de la tabla de análisis (unión externa, sección 6.1) y se eliminan las filas con algún nulo: el resultado equivale a una **unión interna** (solo las horas presentes en las dos fuentes) sin valores ausentes. No se imputa nada.
+
+**Sintaxis básica.**
+
+```python
+tabla.dropna(subset=["t", "hr", "v", "pm"])   # quita las filas con algún nulo en esas columnas
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/regression.py -->
+```python
+    data = frame.dropna(subset=PREDICTORS + [TARGET])[PREDICTORS + [TARGET]]
+    return data, len(frame) - len(data)
+```
+
+Con las muestras y la ventana de D = 2026-10-18 quedan 8 659 horas de 8 755: se excluyen 96, los últimos 4 días, que tienen PM2.5 pero aún no tienen ERA5.
+
+### 7.2 Separación temporal y Pipeline: sin fuga de información
+
+**Concepto.** El modelo se **entrena** con los primeros 9 meses y se **evalúa** con el resto, dejando 24 h en medio (D-018). La estandarización (restar la media y dividir por la desviación) es parte del modelo: si se calculara con todo el año, el entrenamiento «vería» el periodo de prueba. Un **Pipeline** de scikit-learn encadena el escalador y la regresión y garantiza que los dos aprenden **solo** con lo que se les pasa en `fit` (D-019).
+
+**Sintaxis básica.**
+
+```python
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+
+modelo = Pipeline([("scaler", StandardScaler()), ("regression", LinearRegression())])
+modelo.fit(X_entrenamiento, y_entrenamiento)   # el escalador aprende media y desviación aquí
+modelo.predict(X_prueba)                       # aplica la MISMA transformación a la prueba
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/regression.py -->
+```python
+    # El escalador aprende media y desviación solo del entrenamiento (D-019).
+    pipeline = Pipeline([("scaler", StandardScaler()), ("regression", LinearRegression())])
+    pipeline.fit(x_train, y_train)
+    predicted = pipeline.predict(x_test)
+```
+
+- `x_train`/`y_train` salen de `split.train(data)` y `x_test`/`y_test` de `split.test(data)`; las 24 h del hueco no están en ninguno de los dos.
+- La prueba `test_scaler_is_fitted_with_training_rows_only` comprueba que `scaler.mean_` coincide con la media del entrenamiento y **no** con la de todo el periodo.
+
+**Cuidado.** Llamar a `StandardScaler().fit(X_todo)` antes de separar parece inofensivo, pero filtra la media y la desviación de la prueba al modelo: el error de la prueba saldría artificialmente bajo.
+
+### 7.3 Línea base y métricas
+
+**Concepto.** Un error no significa nada por sí solo. La **línea base** predice siempre la media del PM2.5 de entrenamiento sin mirar ninguna predictora (D-020); el modelo solo aporta algo si la mejora. Se comparan **MAE** (error medio absoluto), **RMSE** (raíz del error cuadrático medio, castiga los errores grandes) y **R²** (proporción de variabilidad explicada; en la prueba puede ser negativo).
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/regression.py -->
+```python
+    # Línea base: la media del PM2.5 de entrenamiento, sin mirar ninguna predictora (D-020).
+    baseline_value = float(y_train.mean())
+    baseline = np.full(len(y_test), baseline_value)
+    metrics = pd.DataFrame(
+        {"modelo": _metrics(y_test, predicted), "linea_base": _metrics(y_test, baseline)}
+    ).T
+```
+
+- `np.full(len(y_test), baseline_value)` es un vector con la misma predicción en todas las horas de prueba.
+- `_metrics` calcula MAE, RMSE y R² con `sklearn.metrics` para el modelo y para la línea base, así la tabla resultante tiene una fila por cada uno.
+
+**Cuidado.** El R² de la línea base en la prueba no es 0, porque usa la media del **entrenamiento**. Si la época de prueba tiene otra media (otra estación), será negativo, y también puede serlo el del modelo.
+
+### 7.4 Coeficientes en unidades originales
+
+**Concepto.** Con predictoras estandarizadas, cada coeficiente dice cuántos µg/m³ cambia la predicción por **una desviación estándar** de la predictora, manteniendo las demás fijas: así se comparan entre sí. Para leerlos «por °C» o «por m/s» se dividen entre la desviación de entrenamiento de cada predictora.
+
+**Sintaxis básica.** Si la predicción es `b0 + b1·(T − media)/desv`, entonces el efecto de 1 °C es `b1 / desv` y el intercepto en unidades originales es `b0 − (b1/desv)·media`.
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/regression.py -->
+```python
+    scaler = pipeline.named_steps["scaler"]
+    model = pipeline.named_steps["regression"]
+    original = model.coef_ / scaler.scale_
+    coefficients = pd.DataFrame(
+        {"estandarizado": model.coef_, "original": original}, index=PREDICTORS
+    )
+    intercept_original = float(model.intercept_ - np.sum(original * scaler.mean_))
+```
+
+- `named_steps` da acceso a cada paso del Pipeline ya ajustado: `scale_` y `mean_` son la desviación y la media aprendidas en el entrenamiento.
+- La prueba `test_known_coefficients_are_recovered` genera datos con PM2.5 = 5 + 2·T − 0,1·HR − 3·V y comprueba que se recuperan 2, −0,1, −3 y 5.
+- El intercepto estandarizado coincide con la media de PM2.5 del entrenamiento, es decir, con la línea base.
+
+### 7.5 Diagnósticos: VIF y Durbin-Watson
+
+**Concepto.** El **VIF** (*variance inflation factor*) de una predictora mide cuánto la explican las demás: 1 = nada; más de 5–10 = colinealidad preocupante, con coeficientes inestables. El estadístico de **Durbin-Watson** de los residuos vale cerca de 2 si los residuos de horas consecutivas son independientes y se acerca a 0 si están positivamente autocorrelacionados. Por esto último el proyecto **no** calcula p-valores: con residuos autocorrelacionados serían engañosamente pequeños.
+
+**Sintaxis básica.**
+
+```python
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.stats.stattools import durbin_watson
+from statsmodels.tools import add_constant
+
+X = add_constant(predictoras)                 # columna 0 = constante
+variance_inflation_factor(X, 1)               # VIF de la primera predictora
+durbin_watson(residuos)                       # ≈ 2 independientes; ≈ 0 autocorrelación positiva
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/regression.py -->
+```python
+    # VIF con las predictoras de entrenamiento; la columna 0 es la constante añadida.
+    with_constant = add_constant(x_train.to_numpy())
+    vif = pd.Series(
+        [variance_inflation_factor(with_constant, i + 1) for i in range(len(PREDICTORS))],
+        index=PREDICTORS,
+    )
+```
+
+- Sin `add_constant`, el VIF se calcularía sobre un modelo sin intercepto y saldría inflado.
+- La prueba `test_collinear_predictors_have_high_vif` construye una humedad casi lineal en la temperatura y comprueba VIF > 10; con predictoras independientes el VIF queda por debajo de 1,1.
+- Durbin-Watson se calcula con `durbin_watson(residuals)` sobre los residuos de la prueba en orden temporal.
+
+Resultado real con las muestras (D = 2026-10-18; detalle e interpretación en [regresion.md](regresion.md#resultado-con-las-muestras)): MAE del modelo 5,72 frente a 6,10 µg/m³ de la línea base, R² −0,67 frente a −0,66, VIF entre 1,3 y 4,1 y **Durbin-Watson 0,14**: los residuos están fuertemente autocorrelacionados.

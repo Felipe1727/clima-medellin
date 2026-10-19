@@ -84,10 +84,10 @@ Los datos horarios están **autocorrelacionados**: el PM2.5 de las 08:00 se pare
                                                    (se descarta)
 ```
 
-- **Entrenamiento:** las primeras ~3/4 partes del periodo, por fecha.
+- **Entrenamiento:** del inicio de la ventana a las 00:00 locales del mismo día **9 meses naturales** después (si ese día no existe, el último día del mes).
 - **Hueco:** 24 h descartadas para que la autocorrelación de corto plazo no conecte el final del entrenamiento con el inicio de la prueba.
-- **Prueba:** el último ~1/4 del periodo.
-- Las proporciones exactas (por fechas o por número de observaciones) se fijan en la Fase 7 [Recomendación: por fechas, para que sean reproducibles].
+- **Prueba:** del final del hueco al fin de la ventana (~3 meses).
+- Las fechas se fijan **por calendario**, no por número de observaciones, para que sean reproducibles; el resultado las imprime. Implementado en `split.temporal_split` (Fase 6) y usado por `regression.fit_and_evaluate` (Fase 7).
 
 **Limitación:** la prueba cubre unos 3 meses concretos (por ejemplo, de julio a octubre), con un régimen de lluvias y de emisiones que puede diferir del entrenamiento. Las métricas reflejan cómo generaliza el modelo **a esa época**, no al año en general.
 
@@ -124,13 +124,13 @@ Notación: $y_i$ real, $\hat{y}_i$ predicho, $n$ observaciones de prueba, $\bar{
 
 | | MAE | RMSE | R² |
 |---|---|---|---|
-| Línea base | — | — | ≈ 0 o negativo* |
-| Regresión lineal | — | — | — |
+| Línea base | MAE_base | RMSE_base | ≈ 0 o negativo* |
+| Regresión lineal | MAE_modelo | RMSE_modelo | R²_modelo |
 | Mejora relativa | (MAE_base − MAE_modelo) / MAE_base | Ídem | Diferencia |
 
 \* El R² de la línea base en prueba no es exactamente 0, porque usa la media del **entrenamiento** y no la de la prueba. Si las épocas difieren, será negativo.
 
-La tabla se llenará en la Fase 7; no hay resultados todavía.
+Los valores reales con las muestras están en [Resultado con las muestras](#resultado-con-las-muestras).
 
 ## Diagnósticos
 
@@ -138,7 +138,7 @@ La tabla se llenará en la Fase 7; no hay resultados todavía.
 
 - **Problema:** en Medellín, la temperatura y la humedad relativa probablemente estén muy correlacionadas de forma negativa, porque al calentarse el aire su humedad relativa baja [Supuesto]. Si dos predictoras cuentan casi la misma historia, el modelo no sabe a cuál atribuir el efecto, y los coeficientes individuales se vuelven inestables o con signos contraintuitivos, aunque las predicciones sigan siendo buenas.
 - **Medida:** $\text{VIF}_j = \frac{1}{1 - R^2_j}$, donde $R^2_j$ es el R² de la regresión de la predictora $j$ sobre las demás. VIF = 1 indica ninguna colinealidad; > 5–10 es preocupante [Supuesto: umbral convencional].
-- **Qué hacer:** informar del VIF junto a los coeficientes y no interpretar individualmente los coeficientes con un VIF alto. Opcionalmente, comparar con un modelo sin una de las dos variables (decisión de la Fase 7).
+- **Qué hacer:** informar del VIF junto a los coeficientes y no interpretar individualmente los coeficientes con un VIF alto. No se compara con modelos alternativos sin alguna variable: la selección de variables queda fuera del alcance (Fase 7).
 
 ### Autocorrelación
 
@@ -148,9 +148,9 @@ La tabla se llenará en la Fase 7; no hay resultados todavía.
 
 ### Asimetría de PM2.5
 
-- **Problema:** PM2.5 suele tener una distribución asimétrica a la derecha: muchos valores moderados y algunos picos altos [Supuesto, se comprobará con el histograma de la Fase 6]. La regresión lineal por mínimos cuadrados da mucho peso a los picos.
+- **Problema:** PM2.5 tiene una distribución asimétrica a la derecha: muchos valores moderados y algunos picos altos (en la muestra anual, mediana 10,6 µg/m³, media 12,9, percentil 95 de 29,3 y máximo de 49,9). La regresión lineal por mínimos cuadrados da mucho peso a los picos.
 - **Diagnóstico:** el histograma de PM2.5 y el gráfico de residuos frente a predichos (si los residuos se abren en abanico, la varianza no es constante).
-- **Opción:** modelar log(PM2.5). Cambia la interpretación de los coeficientes (efectos porcentuales) y complica comparar las métricas. Decisión de la Fase 7 (DP-08); por defecto se usa la escala original, porque es más fácil de explicar [Recomendación].
+- **Opción descartada:** modelar log(PM2.5). Cambiaría la interpretación de los coeficientes (efectos porcentuales) y complicaría comparar las métricas. **Decisión (DP-08): escala original**, más fácil de explicar; la asimetría se muestra en el histograma y en los residuos.
 
 ## Limitaciones de interpretación
 
@@ -159,6 +159,43 @@ La tabla se llenará en la Fase 7; no hay resultados todavía.
 3. **Escala espacial.** Las relaciones corresponden a celdas de 25–45 km, no al centro de Medellín.
 4. **Escala temporal.** Un año de datos y una prueba de ~3 meses no permiten generalizar a otros años ni a eventos extremos (por ejemplo, episodios de incendios regionales).
 5. **Extrapolación.** El modelo no es fiable fuera del rango de valores visto en el entrenamiento.
+6. **Empalmes del pronóstico.** El PM2.5 de CAMS salta a las 00 y 12 UTC porque el archivo encadena pronósticos ([fuentes-y-datos.md](fuentes-y-datos.md#empalmes-de-las-ejecuciones-del-pronóstico-00-y-12-utc)). Esos saltos no tienen relación con la meteorología y aumentan el error del modelo; no se corrigen.
+
+## Resultado con las muestras
+
+Resultado de `fit_and_evaluate` con las muestras de `samples/` (descargadas el 2026-10-18) y la ventana de D = 2026-10-18. Es reproducible: la misma ejecución da los mismos números (prueba `test_results_are_reproducible`).
+
+**Datos y separación:** 8 755 horas en la ventana, de las que 8 659 tienen las cuatro variables (se excluyen 96: los últimos 4 días, sin ERA5). Entrenamiento: 2025-10-18 → 2026-07-18 (6 552 horas). Hueco de 24 h. Prueba: 2026-07-19 → 2026-10-14 (2 083 horas; ERA5 termina en D−5). Fechas a las 00:00 locales.
+
+**Métricas en la prueba:**
+
+| | MAE (µg/m³) | RMSE (µg/m³) | R² |
+|---|---|---|---|
+| Línea base (media de entrenamiento = 13,97 µg/m³) | 6,10 | 7,01 | −0,66 |
+| Regresión lineal | 5,72 | 7,03 | −0,67 |
+| Mejora relativa | 6,2 % | −0,3 % | −0,01 |
+
+**Coeficientes** (intercepto estandarizado 13,97 µg/m³ = línea base; intercepto en unidades originales −41,5 µg/m³):
+
+| Predictora | Estandarizado (µg/m³ por desviación) | Original | VIF |
+|---|---|---|---|
+| Temperatura | +2,43 | +1,03 µg/m³ por °C | 3,64 |
+| Humedad relativa | +3,99 | +0,42 µg/m³ por punto de % | 4,11 |
+| Viento | −0,99 | −2,19 µg/m³ por m/s | 1,34 |
+
+**Durbin-Watson de los residuos de prueba:** 0,14.
+
+**Interpretación:**
+
+- **El modelo apenas aporta capacidad predictiva.** Reduce el MAE un 6 % frente a la línea base, pero su RMSE es ligeramente peor: acierta algo mejor en las horas típicas y se equivoca igual o más en los picos.
+- **Los dos R² son negativos** porque la prueba (julio–octubre) tiene una media de PM2.5 de 9,6 µg/m³, muy por debajo de la media del entrenamiento (14,0). Predecir con la media del entrenamiento es peor que predecir con la media de la propia prueba, y el modelo no corrige ese cambio de época: es la limitación de la [separación temporal](#separación-temporal-con-hueco) con una prueba de una sola estación.
+- **El viento** tiene el signo esperado: más viento se asocia con menos PM2.5.
+- **La temperatura tiene un coeficiente positivo**, contra la intuición de la capa de mezcla. Su VIF (3,6) y el de la humedad (4,1) indican una colinealidad moderada entre ambas, y las dos siguen el ciclo diario junto con los empalmes de CAMS (el PM2.5 sube a las 19 h locales, cuando la temperatura de ERA5 todavía está alta, ver [cobertura-y-franjas.md](cobertura-y-franjas.md#resultado-con-las-muestras-de-la-fase-1)). No se debe concluir que el calor aumenta el PM2.5.
+- **Durbin-Watson = 0,14** indica una autocorrelación muy fuerte de los residuos: hay mucha menos información independiente de la que sugieren 6 552 horas. Por eso no se presentan p-valores.
+
+Formulación para la defensa con estos números: «En los datos modelados de ERA5 y CAMS para la celda de Medellín, entre el 2025-10-18 y el 2026-10-14, el modelo lineal con temperatura, humedad y viento no explica la variabilidad de PM2.5 en la prueba mejor que su media (R² negativo, igual que la línea base, por el cambio de estación) y reduce el MAE solo un 6 % frente a la línea base. Esto describe una asociación débil en los modelos, no un efecto causal ni una validación con mediciones».
+
+Al ejecutar la aplicación con datos más recientes, los números cambiarán (la ventana es móvil, D-016); la estructura de la interpretación sigue siendo válida.
 
 Formulación recomendada para la defensa: «En los datos modelados de ERA5 y CAMS para la celda de Medellín, durante [periodo], el modelo lineal con temperatura, humedad y viento explica X % de la variabilidad de PM2.5 en la prueba y reduce el MAE un Y % frente a la línea base. Esto describe una asociación en los modelos, no un efecto causal ni una validación con mediciones».
 
@@ -171,8 +208,8 @@ Formulación recomendada para la defensa: «En los datos modelados de ERA5 y CAM
 
 ## Limitaciones y supuestos
 
-- No hay todavía datos ni resultados; todos los ejemplos numéricos son ficticios.
+- Los ejemplos numéricos de las secciones teóricas son ficticios; los resultados reales con las muestras están en [Resultado con las muestras](#resultado-con-las-muestras).
 - La intuición física (capa de mezcla, viento) es conocimiento general y no se ha verificado con fuentes en este proyecto.
 - PM2.5 se usa con resolución horaria (DP-02); los empalmes del pronóstico a las 00 y 12 UTC añaden saltos que la meteorología no explica.
 - Los umbrales del VIF y la elección de Durbin-Watson son convenciones, no requisitos.
-- Las proporciones del split (9 + 3 meses) son aproximadas y se fijan en la Fase 7.
+- La separación se fija por calendario (9 meses naturales, 24 h de hueco y el resto como prueba).
