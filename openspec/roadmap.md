@@ -180,7 +180,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
       ObjectDB -> Python path.
   - Depends on: persistence, ingest
 
-- [ ] `coverage` — Rolling window, coverage metrics and incremental update flow
+- [x] `coverage` — Rolling window, coverage metrics and incremental update flow
   - Acceptance:
     - Pure functions: window (tests for D = 2026-10-09, 2028-02-29, 2028-03-01, 2029-03-01 giving
       365/366/366/365 days), effective end per source, expected/missing steps, interval grouping and
