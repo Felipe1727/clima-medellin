@@ -8,7 +8,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 
 | Fase | Nombre | Estado | Depende de |
 |---|---|---|---|
-| 0 | Documentación y diseño | [~] | — |
+| 0 | Documentación y diseño | [x] | — |
 | 1 | Validación de las APIs | [ ] | 0 |
 | 2 | Modelo de datos y persistencia en ObjectDB | [ ] | 0 |
 | 3 | Ingesta y normalización en Python | [ ] | 1 |
@@ -33,7 +33,8 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 - [x] [fuentes-y-datos.md](fuentes-y-datos.md), [arquitectura.md](arquitectura.md)
 - [x] [cobertura-y-franjas.md](cobertura-y-franjas.md), [regresion.md](regresion.md), [cli-y-visualizaciones.md](cli-y-visualizaciones.md)
 - [x] Este plan de fases
-- [ ] Lectura y revisión completa por parte del estudiante, y respuesta a las decisiones pendientes que dependan de su criterio
+- [x] Lectura y revisión completa por parte del estudiante, y respuesta a las decisiones pendientes que dependan de su criterio (sesión de exploración del 2026-10-18; resultado en [openspec/roadmap.md](../openspec/roadmap.md))
+- [x] Esqueleto del proyecto: proyectos Maven (`java/`) y uv (`python/`), integración continua y [implementacion.md](implementacion.md)
 
 **Conceptos que se estudiarán:**
 - *Reanálisis frente a observación*: entender qué representa cada dato antes de usarlo.
@@ -46,7 +47,7 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Decisiones abiertas:** ninguna se resuelve aquí; todas se asignan a fases posteriores (ver la [tabla final](#decisiones-pendientes)).
 
-**Estado:** [~] en curso (documentos escritos; falta la revisión del estudiante).
+**Estado:** [x] completada.
 
 ---
 
