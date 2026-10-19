@@ -7,7 +7,7 @@
 
 ## 2. Actualización incremental
 
-- [ ] 2.1 Implementar `clima_medellin/update.py` (plan, ejecución con recorte a la ventana, actualización completa) y la capa HTTP falsa de pruebas; con el JAR real y una base temporal probar: carga inicial COMPLETA en ambas fuentes, segunda actualización sin peticiones, un día ausente que produce una sola petición, nada guardado en o después del fin efectivo e intento vacío con lote de 0 insertados; verificar con `uv run pytest`
+- [x] 2.1 Implementar `clima_medellin/update.py` (plan, ejecución con recorte a la ventana, actualización completa) y la capa HTTP falsa de pruebas; con el JAR real y una base temporal probar: carga inicial COMPLETA en ambas fuentes, segunda actualización sin peticiones, un día ausente que produce una sola petición, nada guardado en o después del fin efectivo e intento vacío con lote de 0 insertados; verificar con `uv run pytest`
 
 ## 3. Documentación
 
