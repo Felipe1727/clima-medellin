@@ -13,7 +13,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 2 | Modelo de datos y persistencia en ObjectDB | [x] | 0 |
 | 3 | Ingesta y normalización en Python | [x] | 1 |
 | 4 | Puente Java↔Python | [x] | 2, 3 |
-| 5 | Cobertura histórica e incrementos | [ ] | 4 |
+| 5 | Cobertura histórica e incrementos | [x] | 4 |
 | 6 | Franjas horarias y estadística descriptiva | [ ] | 5 |
 | 7 | Regresión lineal y evaluación | [ ] | 6 |
 | 8 | Visualizaciones | [ ] | 6, 7 |
@@ -173,10 +173,10 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** calcular la cobertura de la ventana móvil y descargar solo lo que falta, respetando la latencia de cada fuente.
 
 **Entregables:**
-- [ ] Cálculo de la ventana (incluido el 29 de febrero), del fin efectivo por fuente y de los intervalos faltantes, según [cobertura-y-franjas.md](cobertura-y-franjas.md).
-- [ ] Estados COMPLETA, PARCIAL y SIN_DATOS con umbrales confirmados (DP-03).
-- [ ] Carga inicial completa de un año en la base.
-- [ ] Prueba incremental: borrar un día en una base de prueba (o empezar con un hueco) y comprobar que solo se pide ese día.
+- [x] Cálculo de la ventana (incluido el 29 de febrero), del fin efectivo por fuente y de los intervalos faltantes, según [cobertura-y-franjas.md](cobertura-y-franjas.md) (`python/src/clima_medellin/coverage.py`).
+- [x] Estados COMPLETA, PARCIAL y SIN_DATOS con umbrales confirmados (DP-03: pasos horarios en las dos fuentes).
+- [x] Carga inicial completa de un año en la base: probada con el JAR real, una base temporal y una API falsa que sirve valores de las muestras (`test_update.py`); las dos fuentes quedan COMPLETA.
+- [x] Prueba incremental: empezar con un día ausente de ERA5 y comprobar que solo se pide ese día (`test_a_missing_day_is_the_only_request`).
 
 **Conceptos que se estudiarán:**
 - *Ventana móvil*: periodo que se desplaza con la fecha actual.
@@ -188,9 +188,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 4.
 
-**Decisiones abiertas:** DP-03, DP-09, DP-12; D-014 pasa a definitiva.
+**Decisiones abiertas:** DP-03, DP-09 y DP-12 (resueltas el 2026-10-18); D-014 definitiva.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 

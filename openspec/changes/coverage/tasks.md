@@ -11,8 +11,8 @@
 
 ## 3. Documentación
 
-- [ ] 3.1 Escribir la sección 5 de `docs/implementacion.md` (conjuntos esperados frente a existentes, agrupación de intervalos, ventana y 29 de febrero, métricas y estado) con fragmentos reales; verificar con `uv run pytest`
-- [ ] 3.2 Actualizar `docs/cobertura-y-franjas.md` (reglas implementadas, recorte al inicio de la ventana), `docs/decisiones.md` (D-014 definitiva, D-015, D-016) y `docs/fases.md` (Fase 5 completada); verificar que no quedan decisiones de la Fase 5 pendientes
+- [x] 3.1 Escribir la sección 5 de `docs/implementacion.md` (conjuntos esperados frente a existentes, agrupación de intervalos, ventana y 29 de febrero, métricas y estado) con fragmentos reales; verificar con `uv run pytest`
+- [x] 3.2 Actualizar `docs/cobertura-y-franjas.md` (reglas implementadas, recorte al inicio de la ventana), `docs/decisiones.md` (D-014 definitiva, D-015, D-016) y `docs/fases.md` (Fase 5 completada); verificar que no quedan decisiones de la Fase 5 pendientes
 - [ ] 3.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

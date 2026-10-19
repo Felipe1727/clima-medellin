@@ -27,9 +27,9 @@ Este documento reúne las decisiones de diseño del proyecto en un formato liger
 | [D-011](#d-011--clave-natural-ubicación--fuente--timestamp-utc) | Clave natural: ubicación + fuente + timestamp UTC | Definitiva | — |
 | [D-012](#d-012--ausentes-como-null-nunca-como-0) | Ausentes como null, nunca 0 | Definitiva | — |
 | [D-013](#d-013--solo-inserciones-correcciones-mediante-lote-explícito) | Solo inserciones; sin correcciones | Definitiva | — |
-| [D-014](#d-014--criterio-de-cobertura-98--y-hueco-máximo-de-6-h) | Cobertura COMPLETA: ≥ 98 % y hueco ≤ 6 h | Provisional | Fase 5 |
-| [D-015](#d-015--actualización-incremental-respetando-la-latencia) | Actualización incremental respetando la latencia | Definitiva | Fase 5 (detalles) |
-| [D-016](#d-016--ventana-móvil-de-un-año) | Ventana móvil de un año | Definitiva | Fase 5 (caso del 29 de febrero) |
+| [D-014](#d-014--criterio-de-cobertura-98--y-hueco-máximo-de-6-h) | Cobertura COMPLETA: ≥ 98 % y hueco ≤ 6 h | Definitiva | — |
+| [D-015](#d-015--actualización-incremental-respetando-la-latencia) | Actualización incremental respetando la latencia | Definitiva | — |
+| [D-016](#d-016--ventana-móvil-de-un-año) | Ventana móvil de un año | Definitiva | — |
 | [D-017](#d-017--regresión-lineal-pm25--temperatura--humedad--viento) | Regresión lineal: PM2.5 ~ temperatura + humedad + viento | Definitiva | — |
 | [D-018](#d-018--split-temporal-9--3-meses-con-hueco-de-24-h) | Split temporal: 9 meses naturales + resto, con hueco de 24 h | Definitiva | — |
 | [D-019](#d-019--pipeline-con-escalador-ajustado-solo-con-entrenamiento) | Pipeline con escalador ajustado solo con entrenamiento | Definitiva | — |
@@ -164,14 +164,14 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Opciones consideradas:** solo un porcentaje; solo el hueco máximo; ambos.
 - **Decisión:** el estado es COMPLETA si **cada variable** tiene una cobertura ≥ 98 % y un hueco máximo ≤ 6 h; PARCIAL si hay algún dato sin cumplir lo anterior; SIN_DATOS si no hay ninguno. Los umbrales son **decisiones de diseño, no estándares**. Ver [cobertura-y-franjas.md](cobertura-y-franjas.md#criterio-de-cobertura).
 - **Consecuencias y limitaciones:** con 8 760 horas, el 98 % tolera unas 175 horas faltantes. El hueco máximo evita que esas horas se concentren en un solo tramo. Para PM2.5 el número de pasos esperados depende de D-006.
-- **Estado:** provisional (Fase 5).
+- **Estado:** definitiva (Fase 5). Los pasos esperados son horarios para las dos fuentes (DP-03) y los umbrales se aplican por variable en `coverage.state_of`.
 
 ## D-015 — Actualización incremental respetando la latencia
 
 - **Contexto:** el límite gratuito de Open-Meteo es de 10 000 llamadas al día, y las peticiones de más de 2 semanas o de más de 10 variables cuentan como varias llamadas [Verificado: [Open-Meteo – precios](https://open-meteo.com/en/pricing)].
 - **Opciones consideradas:** (a) pedir solo los intervalos faltantes; (b) descargar el año entero cada vez.
 - **Decisión:** (a). Además, no se piden fechas que la fuente todavía no publica: ERA5 llega con 5 días de retraso [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)]. En PM2.5 la API también devuelve pronósticos futuros, que nunca se guardan [Recomendación].
-- **Consecuencias y limitaciones:** hace falta calcular los faltantes (Fase 5). Un intervalo cuya fuente no tiene datos se volverá a pedir en cada actualización; conviene registrarlo en IngestionBatch para no insistir indefinidamente [Recomendación]. Las filas con todas las variables a `null` no se guardan nunca (DP-12): así siguen contando como faltantes y se vuelven a pedir en la siguiente actualización. Las horas de ERA5 aún no publicadas, que la API devuelve como `null`, se descartan por la misma regla y por el recorte en el fin efectivo.
+- **Consecuencias y limitaciones:** los faltantes se calculan en Python a partir de los timestamps que devuelve `coverage` (Fase 5). Un intervalo cuya fuente no tiene datos se vuelve a pedir en cada actualización, y cada intento queda registrado como un IngestionBatch con 0 insertados. Las filas con todas las variables a `null` no se guardan nunca (DP-12): así siguen contando como faltantes y se vuelven a pedir en la siguiente actualización. Las horas de ERA5 aún no publicadas, que la API devuelve como `null`, se descartan por la misma regla y por el recorte en el fin efectivo.
 - **Estado:** definitiva.
 
 ## D-016 — Ventana móvil de un año
@@ -233,4 +233,4 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - Las decisiones D-001 a D-021 vienen del encargo inicial y no se volvieron a investigar. Solo se comprobaron contra la documentación oficial las afirmaciones marcadas como [Verificado].
 - D-006 y D-009 estuvieron pendientes de revisión por el paso de 3 horas de PM2.5; la Fase 1 mostró que la API entrega valores horarios y ambas quedaron definitivas sin cambiar la fuente ni las franjas.
 - Los enlaces de verificación se consultaron el 2026-10-09. La documentación de Open-Meteo y de ObjectDB puede cambiar.
-- La lista de decisiones DP-xx, todas resueltas el 2026-10-18, está en [fases.md](fases.md#decisiones-pendientes). D-010 y D-011 se confirmaron en la Fase 2; D-014 se confirma en la Fase 5.
+- La lista de decisiones DP-xx, todas resueltas el 2026-10-18, está en [fases.md](fases.md#decisiones-pendientes). D-010 y D-011 se confirmaron en la Fase 2 y D-014 en la Fase 5.

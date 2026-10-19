@@ -21,7 +21,7 @@ El proyecto analiza siempre **el último año**. Si hoy es 9 de octubre de 2026,
 
 ### Caso del 29 de febrero
 
-Si D es el 29 de febrero (por ejemplo, el 29-02-2028), «el mismo día del año anterior» no existe. Regla propuesta: **se usa el 28 de febrero** del año anterior (el último día válido de ese mes) [Recomendación, DP-09].
+Si D es el 29 de febrero (por ejemplo, el 29-02-2028), «el mismo día del año anterior» no existe. Regla adoptada: **se usa el 28 de febrero** del año anterior (el último día válido de ese mes) (DP-09, implementada en `coverage.one_year_before`).
 
 Consecuencia: la ventana no tiene siempre 365 días. Tiene 366 cuando incluye un 29 de febrero. Por eso **el número de horas esperadas se calcula a partir de la ventana real**, nunca se fija en 8 760.
 
@@ -103,11 +103,12 @@ Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen r
 
 1. **Solo lo que falta.** Nunca se descarga el año completo si ya hay datos (D-015).
 2. **Solo lo publicado.** No se piden fechas posteriores al fin efectivo de la fuente.
-3. **Nunca el pronóstico.** De las respuestas de PM2.5 se descartan los timestamps posteriores a la hora actual.
+3. **Nunca el pronóstico.** De las respuestas de PM2.5 se descartan los timestamps en o después del fin de la ventana (las 00:00 locales de hoy), que ya es pasado; así nunca se guarda una hora de pronóstico.
+   - **Solo dentro de la ventana.** La API recibe días UTC completos, así que la primera petición empieza a las 00:00 UTC, cinco horas antes de la ventana (05:00 UTC); esas horas se descartan antes de importar.
 4. **Solo inserciones.** Si un timestamp ya existe, se omite y se cuenta como duplicado. No se sobrescribe (D-013).
 5. **Sin correcciones.** Un valor guardado no cambia nunca; el proyecto no implementa lotes de corrección (DP-04). Los datos recientes de ERA5 (ERA5T) se tratan como definitivos.
 6. **Nada se borra por salir de la ventana.** Los datos de hace 13 meses siguen en la base; el análisis simplemente filtra por la ventana actual. A ~17 500 entidades por año, el límite gratuito de un millón tardaría décadas en alcanzarse [Supuesto: cálculo propio].
-7. **Intentos vacíos.** Si la API no devuelve datos para un intervalo, se registra un IngestionBatch con 0 insertados. Así se sabe que el hueco es de la fuente y no un fallo del proceso [Recomendación].
+7. **Intentos vacíos.** Si la API no devuelve datos para un intervalo, se registra un IngestionBatch con 0 insertados. Así se sabe que el hueco es de la fuente y no un fallo del proceso. Implementado: `update.execute_plan` importa también los lotes vacíos.
 
 ## Franjas horarias
 
@@ -172,7 +173,8 @@ El perfil diurno es la media de cada variable para cada hora local (0–23). Sir
 ## Limitaciones y supuestos
 
 - Los umbrales del 98 % y de 6 h, la regla de 2 de 3 horas y las horas de las franjas son decisiones de diseño, no criterios estándar.
-- La regla del 29 de febrero es una convención propuesta.
+- La regla del 29 de febrero es una convención del proyecto (DP-09).
+- La implementación (Fase 5) está en `python/src/clima_medellin/coverage.py` y `update.py`, explicada en [implementacion.md](implementacion.md#5-ventana-móvil-cobertura-e-intervalos-faltantes).
 - PM2.5 se trata como horario porque así lo entrega la API (Fase 1); sus empalmes de 00 y 12 UTC afectan a las franjas de la mañana y de la noche.
 - Las cuatro variables son valores instantáneos a la hora indicada [Verificado: documentación de Open-Meteo, Fase 1], así que las franjas no se desplazan.
 - Las franjas en hora local no tienen en cuenta que el amanecer y el atardecer cambian algo a lo largo del año; en Medellín, cerca del ecuador, esa variación es pequeña [Supuesto].
