@@ -16,6 +16,12 @@ from clima_medellin import coverage as cov
 from clima_medellin import openmeteo, paths, plots, ui
 from clima_medellin.bands import daily_bands
 from clima_medellin.bridge import BridgeError, JavaBridge
+from clima_medellin.calendar_models import (
+    PredictionRequestError,
+    fit_calendar_models,
+    predict,
+    request_hours,
+)
 from clima_medellin.config import LOCAL_TZ, LOCATION, SOURCES
 from clima_medellin.dataset import load_window
 from clima_medellin.descriptive import describe_bands, describe_variables
@@ -79,7 +85,7 @@ class Menu:
             "3": self.query_records,
             "4": self.show_statistics,
             "5": self.run_regression,
-            "6": self.predict_soon,
+            "6": self.predict_values,
             "7": self.make_charts,
         }
 
@@ -407,7 +413,9 @@ class Menu:
         split = temporal_split(win)
         result = fit_and_evaluate(data, split)
         local = {k: pd.Timestamp(v).tz_convert(LOCAL_TZ) for k, v in vars(split).items()}
-        self.print(Text("Modelo: PM2.5 a partir de temperatura, humedad y viento", style="bold"))
+        calendar = fit_calendar_models(frame, split)
+        self.print(self.models_table(calendar, result.metrics))
+        self.print(Text("Detalle: PM2.5 a partir de temperatura, humedad y viento", style="bold"))
         self.print(
             f"Aprende con {local['train_start']:%Y-%m-%d} → {local['train_end']:%Y-%m-%d} "
             f"({result.n_train} horas) y se pone a prueba con {local['test_start']:%Y-%m-%d} → "
@@ -434,15 +442,163 @@ class Menu:
             ui.meaning(
                 f"Con el clima de cada hora, el modelo se equivoca en promedio {model_mae:.1f} "
                 f"µg/m³; predecir siempre la media se equivoca {base_mae:.1f}. Es decir, "
-                f"{verdict} un {abs(gain):.0f} %. Describe una asociación dentro de los modelos "
-                "ERA5 y CAMS, no una causa ni una medición real del aire de Medellín."
+                f"{verdict} un {abs(gain):.0f} %. Los modelos de calendario solo usan la hora y la "
+                "época del año y, aun así, predicen el PM2.5 con un error típico de "
+                f"{calendar['pm25_ug_m3'].typical_error:.1f}: en estos datos el PM2.5 depende más "
+                "de la hora que del clima. Todo describe asociaciones dentro de los modelos ERA5 "
+                "y CAMS, no causas ni mediciones reales del aire de Medellín."
             )
         )
 
+    def models_table(self, calendar: dict, weather_metrics: pd.DataFrame) -> Table:
+        """Una fila por modelo: su error típico frente al de su línea base."""
+        rows = [
+            (f"{plots.NAMES[v]} (calendario)", plots.UNITS[v], m.metrics)
+            for v, m in calendar.items()
+        ]
+        rows.append(("PM2.5 (a partir del clima)", plots.UNITS["pm25_ug_m3"], weather_metrics))
+        table = Table(
+            title="Qué tan bien predice cada modelo (periodo de prueba)",
+            title_justify="left",
+            header_style="bold cyan",
+        )
+        for column in (
+            "modelo",
+            "unidad",
+            ui.TERMS["MAE"],
+            "error típico de la línea base",
+            "mejora (%)",
+            ui.TERMS["R2"],
+        ):
+            table.add_column(
+                column,
+                justify="left" if column in ("modelo", "unidad") else "right",
+                no_wrap=column == "modelo",
+            )
+        for name, unit, metrics in rows:
+            model_mae = metrics.loc["modelo", "MAE"]
+            base_mae = metrics.loc["linea_base", "MAE"]
+            table.add_row(
+                name,
+                unit,
+                f"{model_mae:.2f}",
+                f"{base_mae:.2f}",
+                f"{100 * (base_mae - model_mae) / base_mae:.0f}",
+                f"{metrics.loc['modelo', 'R2']:.2f}",
+            )
+        return table
+
     # --- opción 6 ----------------------------------------------------------------------
 
-    def predict_soon(self) -> None:
-        self.print(ui.warn("La predicción estará disponible próximamente."))
+    def predict_values(self) -> None:
+        if not self.guard():
+            return
+        start = self.input("Desde (ej. 2026-11-03 o 2026-11-03 15:00): ")
+        end = self.input("Hasta (Enter = solo esa fecha u hora; ej. 2026-11-05): ")
+        win = cov.window(self.today())
+        try:
+            hours = request_hours(start, end, win, self.today())
+        except PredictionRequestError as exc:
+            self.print(ui.error(str(exc)))
+            return
+        frame = load_window(self.bridge, win)
+        models = fit_calendar_models(frame, temporal_split(win))
+        table = predict(models, hours, frame)
+        has_real = bool(table.xs("real", axis=1, level=1).notna().any().any())
+        if len(table) > 48:
+            self.print(self.daily_summary(table, models))
+            if self.confirm("¿Ver también la tabla hora por hora?"):
+                self.print_hourly(table, models, has_real, page=24)
+            answer = self.input(
+                "Gráfica de la predicción (1 = ventana, 2 = PNG, Enter = ninguna): "
+            )
+            mode = {"1": "ventana", "2": "png"}.get(answer.strip())
+            if mode:
+                fig = plots.prediction_chart(table, models)
+                output = plots.save_or_show(fig, "prediccion", mode, self.outputs_dir)
+                if output.notice:
+                    self.print(ui.warn(output.notice))
+                elif output.path:
+                    self.print(ui.ok(f"Gráfica guardada: {output.path}"))
+        else:
+            self.print_hourly(table, models, has_real)
+        errors = ", ".join(
+            f"{plots.NAMES[v].lower()} ±{m.typical_error:.1f} {plots.UNITS[v]}"
+            for v, m in models.items()
+        )
+        text = (
+            "Son valores TÍPICOS para esa hora en esa época del año, calculados solo con la hora "
+            "del día y la estación: no son un pronóstico del tiempo. Un día concreto puede ser "
+            f"más caluroso o más lluvioso; en promedio el modelo se equivoca en {errors}."
+        )
+        if has_real:
+            gap = table.xs("diferencia", axis=1, level=1).abs().mean()
+            text += (
+                " En las horas que ya tienen dato guardado, la diferencia media con el valor real "
+                f"fue de {gap['temperature_2m_c']:.1f} °C, {gap['relative_humidity_2m_pct']:.1f} %"
+                f" y {gap['pm25_ug_m3']:.1f} µg/m³."
+            )
+        self.print(ui.meaning(text))
+
+    def print_hourly(self, table: pd.DataFrame, models: dict, has_real: bool, page: int = 0):
+        """Tabla hora a hora: valor típico y, si existe, valor real y diferencia."""
+        kind = "con valores reales" if has_real else "valores típicos"
+        rows = table.index
+        for first in range(0, len(rows), page or len(rows)):
+            chunk = table.iloc[first : first + (page or len(rows))]
+            out = Table(
+                title=f"Predicción por hora ({kind})",
+                title_justify="left",
+                header_style="bold cyan",
+            )
+            out.add_column("hora local")
+            for variable in models:
+                name = f"{plots.NAMES[variable]} ({plots.UNITS[variable]})"
+                out.add_column(name if not has_real else f"{name}\npredicción", justify="right")
+                if has_real:
+                    out.add_column("real", justify="right")
+                    out.add_column("diferencia", justify="right")
+            for moment, row in chunk.iterrows():
+                cells = [f"{moment:%Y-%m-%d %H:%M}"]
+                for variable in models:
+                    cells.append(ui.format_value(row[(variable, "prediccion")], 1))
+                    if has_real:
+                        cells.append(ui.format_value(row[(variable, "real")], 1))
+                        cells.append(ui.format_value(row[(variable, "diferencia")], 1))
+                out.add_row(*cells)
+            footer = ["error típico"]
+            for model in models.values():
+                footer.append(f"±{model.typical_error:.1f}")
+                if has_real:
+                    footer += ["", ""]
+            out.add_row(*footer, style="italic")
+            self.print(out)
+
+    def daily_summary(self, table: pd.DataFrame, models: dict) -> Table:
+        """Resumen por día: media y rango de la predicción y, si existe, la media real."""
+        out = Table(
+            title=f"Resumen diario ({len(set(table.index.date))} días, valores típicos)",
+            title_justify="left",
+            header_style="bold cyan",
+        )
+        out.add_column("día")
+        for variable in models:
+            out.add_column(
+                f"{plots.NAMES[variable]} ({plots.UNITS[variable]})\nmedia (mín–máx)",
+                justify="right",
+            )
+        days = table.groupby(table.index.date)
+        for day, group in days:
+            cells = [str(day)]
+            for variable in models:
+                pred = group[(variable, "prediccion")]
+                cell = f"{pred.mean():.1f} ({pred.min():.1f}–{pred.max():.1f})"
+                real = group[(variable, "real")]
+                if real.notna().any():
+                    cell += f" · real {real.mean():.1f}"
+                cells.append(cell)
+            out.add_row(*cells)
+        return out
 
     # --- opción 7 ----------------------------------------------------------------------
 
@@ -470,6 +626,9 @@ class Menu:
             "empalmes": lambda: plots.seam_diagnostic(frame["pm25_ug_m3"], start, end),
             "real_predicho": lambda: plots.actual_vs_predicted(result),
             "residuos": lambda: plots.residuals(result),
+            "efecto_hora": lambda: plots.hour_effects(
+                fit_calendar_models(frame, split), start, end
+            ),
         }
         for source in SOURCES:
             existing = self.bridge.coverage(source).existing

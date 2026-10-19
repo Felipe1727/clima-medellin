@@ -159,3 +159,28 @@ def test_window_without_display_falls_back_to_png(tmp_path, frame):
     out = plots.save_or_show(fig, "serie", "ventana", tmp_path)
     assert out.path is not None and out.path.exists()
     assert "No hay pantalla" in out.notice and str(out.path) in out.notice
+
+
+def test_hour_effects_chart(frame):
+    from clima_medellin.calendar_models import fit_calendar_models
+
+    models = fit_calendar_models(frame, SPLIT)
+    fig = plots.hour_effects(models, WIN.start_utc, WIN.end_utc)
+    assert len(fig.axes) == 3
+    assert all(len(ax.patches) == 24 for ax in fig.axes)
+    assert fig.axes[0].get_ylabel() == "Diferencia con la medianoche (°C)"
+    assert_annotated(fig, unit_axes=3)
+
+
+def test_prediction_chart_with_real_values(frame):
+    from clima_medellin.calendar_models import fit_calendar_models, predict, request_hours
+
+    models = fit_calendar_models(frame, SPLIT)
+    hours = request_hours("2026-03-01", "2026-03-03", WIN, date(2026, 10, 18))
+    fig = plots.prediction_chart(predict(models, hours, frame), models)
+    assert len(fig.axes) == 3
+    for ax in fig.axes:
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        assert labels[1:] == ["valor típico", "real"] and labels[0].startswith("± error típico")
+        assert len(ax.collections) == 1  # la banda
+    assert_annotated(fig, unit_axes=3)
