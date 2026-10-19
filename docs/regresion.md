@@ -66,10 +66,8 @@ Ejemplo **ficticio** de lectura: si $\beta_{V} = -2{,}1$ y la desviación del vi
 
 - **Unidad de observación:** un timestamp con PM2.5 y las 3 predictoras no nulas. Las filas con algún `null` se excluyen, sin imputar, y se informa cuántas se excluyeron.
 - **Unión de las fuentes:** WeatherRecord y AirQualityRecord se unen por timestamp UTC en Python, después de la exportación.
-- **Resolución:** [Pendiente de revisión, D-006 y DP-02] si PM2.5 tiene un paso nativo de 3 h:
-  - Si la API devuelve valores interpolados cada hora, usarlos todos triplicaría artificialmente el tamaño de la muestra y aumentaría la autocorrelación. [Recomendación] Usar solo los timestamps nativos (unos 2 920 por año).
-  - Si la API devuelve `null` entre pasos, el filtrado anterior lo hace automáticamente.
-- **Tamaño esperado:** entre ~2 900 (paso de 3 h) y ~8 700 (horario) observaciones por año, menos las excluidas [Supuesto].
+- **Resolución:** horaria, con **todas las horas** de PM2.5 (DP-02). La Fase 1 mostró que la API devuelve 24 valores al día que no son una interpolación simple de los pasos de 3 h ([fuentes-y-datos.md](fuentes-y-datos.md#hallazgos-de-la-fase-1)).
+- **Tamaño esperado:** unas 8 700 observaciones por año (ERA5 termina en D−5, así que los últimos días no tienen predictoras), menos las excluidas.
 
 ## Separación temporal con hueco
 
@@ -156,7 +154,7 @@ La tabla se llenará en la Fase 7; no hay resultados todavía.
 
 ## Limitaciones de interpretación
 
-1. **Se modela un modelo.** Tanto PM2.5 (CAMS) como la meteorología (ERA5) son productos de modelos, no mediciones ([fuentes-y-datos.md](fuentes-y-datos.md#modelados-frente-a-observados)). Si CAMS usa meteorología del mismo centro (ECMWF) [Por verificar, Fase 1], la regresión puede estar recuperando en parte **las ecuaciones internas de CAMS** y no la relación real en Medellín. Un R² alto no demostraría que «el viento limpia el aire de Medellín».
+1. **Se modela un modelo.** Tanto PM2.5 (CAMS) como la meteorología (ERA5) son productos de modelos, no mediciones ([fuentes-y-datos.md](fuentes-y-datos.md#modelados-frente-a-observados)). CAMS se ejecuta con el IFS del ECMWF, que calcula su propia meteorología [Verificado: Fase 1], así que la regresión puede estar recuperando en parte **las ecuaciones internas de CAMS** y no la relación real en Medellín. Un R² alto no demostraría que «el viento limpia el aire de Medellín».
 2. **Correlación no implica causalidad.** La temperatura y el PM2.5 pueden variar juntos porque ambos siguen el ciclo diario (sol, tráfico, capa de mezcla), no porque uno cause el otro. El tráfico de la hora punta, ausente del modelo, es un factor de confusión evidente.
 3. **Escala espacial.** Las relaciones corresponden a celdas de 25–45 km, no al centro de Medellín.
 4. **Escala temporal.** Un año de datos y una prueba de ~3 meses no permiten generalizar a otros años ni a eventos extremos (por ejemplo, episodios de incendios regionales).
@@ -175,6 +173,6 @@ Formulación recomendada para la defensa: «En los datos modelados de ERA5 y CAM
 
 - No hay todavía datos ni resultados; todos los ejemplos numéricos son ficticios.
 - La intuición física (capa de mezcla, viento) es conocimiento general y no se ha verificado con fuentes en este proyecto.
-- El tratamiento de la resolución de PM2.5 depende de la verificación de la Fase 1 (DP-02).
+- PM2.5 se usa con resolución horaria (DP-02); los empalmes del pronóstico a las 00 y 12 UTC añaden saltos que la meteorología no explica.
 - Los umbrales del VIF y la elección de Durbin-Watson son convenciones, no requisitos.
 - Las proporciones del split (9 + 3 meses) son aproximadas y se fijan en la Fase 7.
