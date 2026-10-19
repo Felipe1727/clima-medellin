@@ -24,7 +24,58 @@ Proyecto universitario para la asignatura de **Bases de Datos**. Es una aplicaci
 
 ## Estado actual
 
-**Implementación en curso.** La documentación de diseño está terminada y el esqueleto del proyecto (proyectos Java y Python, integración continua y guía técnica) ya existe. El plan y el seguimiento están en [docs/fases.md](docs/fases.md); el orden de implementación, en [openspec/roadmap.md](openspec/roadmap.md).
+**Implementado.** Las fases 0 a 9 de [docs/fases.md](docs/fases.md) están completas: descarga incremental, persistencia en ObjectDB, cobertura, franjas, estadísticas, regresión, gráficas y el menú de 7 opciones, con pruebas automáticas (JUnit y pytest) e integración continua. La guía técnica del código está en [docs/implementacion.md](docs/implementacion.md); el orden de implementación, en [openspec/roadmap.md](openspec/roadmap.md).
+
+## Instalación
+
+Requisitos previos: **Java 25** (JDK), **Maven 3.9** y **[uv](https://docs.astral.sh/uv/)**. uv descarga por sí mismo Python 3.14 si no está instalado.
+
+```bash
+git clone https://github.com/Felipe1727/clima-medellin.git
+cd clima-medellin
+
+# 1. Compilar el JAR de persistencia (descarga ObjectDB de su repositorio Maven)
+cd java && mvn -q -DskipTests package && cd ..
+
+# 2. Crear el entorno de Python e instalar dependencias y el comando clima-medellin
+cd python && uv sync && cd ..
+```
+
+Comprobación: `cd python && uv run clima-medellin --version` imprime `clima-medellin 0.1.0`.
+
+## Uso
+
+```bash
+cd python
+uv run clima-medellin            # abre el menú
+uv run clima-medellin --verbose  # igual, mostrando también los mensajes del JAR de Java
+```
+
+```text
+  CLIMA MEDELLÍN · Bases de Datos
+  Ubicación: MED-CENTRO · Ventana: 2025-10-18 → 2026-10-18 (America/Bogota)
+
+  1) Verificar cobertura
+  2) Actualizar datos
+  3) Consultar registros
+  4) Estadísticas descriptivas
+  5) Entrenar y evaluar la regresión
+  6) Generar visualizaciones
+  7) Salir
+```
+
+Primer uso: elige **2) Actualizar datos** y confirma con `s`; la carga inicial de un año son dos peticiones a Open-Meteo (unos segundos). Después, las opciones 1 y 3 a 6 trabajan con los datos guardados en `data/clima.odb`, y las gráficas en PNG se guardan en `outputs/`. Cada opción está descrita en [docs/cli-y-visualizaciones.md](docs/cli-y-visualizaciones.md).
+
+Solo puede haber una ejecución a la vez: ObjectDB no permite que dos procesos abran la misma base.
+
+## Pruebas
+
+```bash
+cd java && mvn -q verify && cd ../python && uv run pytest   # pruebas Java y Python
+cd python && uv run ruff check .                            # estilo del código Python
+```
+
+Las pruebas no usan la red: trabajan con las respuestas reales guardadas en `samples/` y con bases temporales.
 
 ## Documentación
 
@@ -61,7 +112,7 @@ clima-medellin/
 
 ## Requisitos
 
-| Componente | Previsto | Estado |
+| Componente | Versión | Estado |
 |---|---|---|
 | Python | 3.14 (gestionado con [uv](https://docs.astral.sh/uv/)) | Verificado: 3.14.7 (Fase 3) |
 | Pandas, scikit-learn, statsmodels, Matplotlib | Versiones fijadas en `python/uv.lock` | Verificado: pandas 3.0.6, scikit-learn 1.9.1, statsmodels 0.15.0, Matplotlib 3.11.2 (Fase 3) |
@@ -85,5 +136,5 @@ Datos meteorológicos y de calidad del aire: [Open-Meteo.com](https://open-meteo
 
 ## Limitaciones y supuestos
 
-- Este README describe un proyecto en fase de diseño: los requisitos, las carpetas y los comandos son previstos y pueden cambiar.
-- Las instrucciones de instalación y ejecución se añadirán en la Fase 9.
+- Las versiones de la tabla de requisitos son las usadas y probadas en el desarrollo (octubre de 2026).
+- Los resultados numéricos documentados (cobertura, franjas, regresión) corresponden a la ventana del 2026-10-18; al ejecutar la aplicación otro día, la ventana móvil cambia y los números también.

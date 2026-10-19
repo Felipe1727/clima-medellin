@@ -17,7 +17,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 6 | Franjas horarias y estadística descriptiva | [x] | 5 |
 | 7 | Regresión lineal y evaluación | [x] | 6 |
 | 8 | Visualizaciones | [x] | 6, 7 |
-| 9 | CLI integrada, pruebas finales y defensa | [ ] | 1–8 |
+| 9 | CLI integrada, pruebas finales y defensa | [x] | 1–8 |
 
 Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
@@ -279,11 +279,11 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** integrar todo en el menú de 7 opciones, probar el flujo completo desde una base vacía, actualizar la documentación con lo aprendido y preparar la defensa.
 
 **Entregables:**
-- [ ] Menú completo según [cli-y-visualizaciones.md](cli-y-visualizaciones.md).
-- [ ] Prueba completa: base vacía → cobertura → actualización → consulta → estadísticas → regresión → gráficas.
-- [ ] Documentación actualizada: todas las [Por verificar] resueltas o justificadas, y decisiones en estado final.
-- [ ] Instrucciones de instalación y ejecución en el README.
-- [ ] Guion de la defensa oral: arquitectura, flujo de datos, decisiones clave y limitaciones.
+- [x] Menú completo según [cli-y-visualizaciones.md](cli-y-visualizaciones.md) (`python/src/clima_medellin/menu.py`).
+- [x] Prueba completa: base vacía → cobertura → actualización → consulta → estadísticas → regresión → gráficas (`test_end_to_end_from_an_empty_database`, con la API falsa de las muestras; repetida a mano con la API real el 2026-10-18).
+- [x] Documentación actualizada: todas las [Por verificar] resueltas o justificadas (PV-01…PV-19), y decisiones en estado final (D-001…D-023, DP-01…DP-12).
+- [x] Instrucciones de instalación y ejecución en el README.
+- [ ] Guion de la defensa oral: arquitectura, flujo de datos, decisiones clave y limitaciones. **Fuera del alcance de la implementación** (ver [openspec/roadmap.md](../openspec/roadmap.md)): lo prepara el estudiante a partir de `docs/`, en particular de [implementacion.md](implementacion.md) y de los resultados de [regresion.md](regresion.md#resultado-con-las-muestras).
 
 **Conceptos que se estudiarán:**
 - *Pruebas de extremo a extremo*: validar el sistema completo, no solo sus partes.
@@ -295,7 +295,7 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Decisiones abiertas:** ninguna nueva; se cierran las restantes.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada en lo que respecta a la implementación; el guion de la defensa oral queda a cargo del estudiante.
 
 ---
 

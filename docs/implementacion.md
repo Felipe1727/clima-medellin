@@ -2,7 +2,7 @@
 
 Este documento explica **cómo está construido el código**: las llamadas a ObjectDB, la inserción y la consulta de datos, los *joins*, el envío de datos de ObjectDB a Python, el análisis y las gráficas. Complementa a [arquitectura.md](arquitectura.md), que explica el **qué** y el **porqué**; aquí se explica el **cómo**, con ejemplos.
 
-Cada especificación del proyecto añade su sección cuando construye la parte correspondiente, así que el documento crece junto con el código.
+El documento se escribió a medida que se construía cada parte (una sección por especificación del proyecto) y está completo: cubre las nueve fases de implementación.
 
 ## Cómo leer este documento
 
@@ -56,7 +56,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [6. Zonas horarias, franjas y estadística descriptiva](#6-zonas-horarias-franjas-y-estadística-descriptiva) | Disponible | `bands-stats` |
 | [7. Unión de datos, split temporal y regresión](#7-unión-de-datos-split-temporal-y-regresión) | Disponible | `regression` |
 | [8. Gráficas con Matplotlib](#8-gráficas-con-matplotlib) | Disponible | `visualizations` |
-| 9. Menú de la CLI | Pendiente | `cli-integration` |
+| [9. Menú de la CLI](#9-menú-de-la-cli) | Disponible | `cli-integration` |
 
 ---
 
@@ -1394,3 +1394,94 @@ matplotlib.use("Agg")          # forzar el backend de archivo (lo hacen las prue
 | `residuals` | Residuos frente a predichos, en el tiempo (con Durbin-Watson) e histograma | ¿Queda un patrón que el modelo no captura? |
 
 Con las muestras, el diagnóstico de empalmes muestra barras de 7,4 µg/m³ (00 UTC) y 5,6 µg/m³ (12 UTC) frente a menos de 2,6 en el resto de horas, y la gráfica de real frente a predicho deja ver que el modelo no alcanza los picos de PM2.5 del periodo de prueba ([regresion.md](regresion.md#resultado-con-las-muestras)).
+
+---
+
+## 9. Menú de la CLI
+
+El menú está en `python/src/clima_medellin/menu.py` y el comando en `cli.py`. Las pruebas son `test_menu.py` (entradas programadas, JAR real, base temporal y la API falsa de las muestras) y `test_cli.py`.
+
+### 9.1 El menú como capa fina
+
+**Concepto.** El menú no contiene reglas de negocio: **orquesta** funciones que ya existen (cobertura, actualización, análisis, regresión, gráficas) y **formatea** sus resultados. Así cada regla vive en un solo sitio, con sus propias pruebas, y el menú solo decide qué llamar y qué mostrar.
+
+| Opción | Llama a | Muestra |
+|---|---|---|
+| 1 Verificar cobertura | `update.current_coverage` | Tabla por fuente y variable (esperados, válidos, %, hueco máximo, huecos, estado) y los 3 intervalos faltantes más largos |
+| 2 Actualizar datos | `update.plan_update`, `update.execute_plan` | Plan, llamadas estimadas, confirmación `[s/N]`, progreso `[…]` por intervalo, resumen `[OK]` de cada lote y cobertura resultante |
+| 3 Consultar registros | `JavaBridge.export` | Tabla paginada (20 filas) con hora local y UTC, valores (`—` si es nulo) y lote |
+| 4 Estadísticas descriptivas | `dataset.load_window`, `descriptive.*`, `bands.daily_bands` | Estadísticas por variable y medias por franja con días válidos |
+| 5 Regresión | `regression.regression_dataset`, `regression.fit_and_evaluate` | Fechas de la separación, métricas frente a la línea base, coeficientes, VIF y Durbin-Watson |
+| 6 Visualizaciones | `plots.*`, `plots.save_or_show` | 13 gráficas en ventana o PNG, con la ruta de cada PNG |
+| 7 Salir | — | «Hasta pronto.» |
+
+**En este proyecto.** El bucle principal:
+
+<!-- fragmento: python/src/clima_medellin/menu.py -->
+```python
+    def run(self) -> None:
+        while True:
+            self.header()
+            try:
+                choice = self.input("  Opción: ").strip()
+            except EOFError, KeyboardInterrupt:
+                choice = "7"
+            if choice == "7":
+                self.print("Hasta pronto.")
+                return
+            action = self.actions.get(choice)
+            if action is None:
+                self.error(f"Opción no válida: {choice!r}. Elige un número del 1 al 7.")
+                continue
+            try:
+                action()
+            except ERRORS as exc:
+                # Ningún error cierra la aplicación: se informa y se vuelve al menú.
+                self.error(str(exc))
+```
+
+- `self.actions` es un diccionario `{"1": self.show_coverage, ...}`: elegir una opción es buscar su función en el diccionario.
+- `except EOFError, KeyboardInterrupt:` (sintaxis sin paréntesis admitida desde Python 3.14) hace que Ctrl+D o Ctrl+C salgan como la opción 7, sin traza.
+- `ERRORS` agrupa los errores esperables (`BridgeError`, `OpenMeteoError`, `NormalizationError`, `ValueError`): se muestran como `[ERROR]` con su mensaje en español y el menú sigue disponible. Por ejemplo, si la base está abierta por otra ejecución, el usuario ve «No se pudo usar la base de datos; cierra otras ejecuciones…» (sección 4.2).
+
+### 9.2 Reglas comunes de las opciones 3 a 6
+
+**Concepto.** Antes de consultar o analizar, el menú comprueba la cobertura: con la base vacía no hay nada que analizar, y con cobertura incompleta los resultados pueden estar sesgados. El usuario decide si seguir, pero siempre sabiéndolo.
+
+<!-- fragmento: python/src/clima_medellin/menu.py -->
+```python
+        reports = current_coverage(self.bridge, self.today())
+        states = {source: report.state for source, report in reports.items()}
+        if all(state == "SIN_DATOS" for state in states.values()):
+            self.warn("La base está vacía. Ejecuta primero la opción 2 (Actualizar datos).")
+            return False
+        partial = [f"{s} {state}" for s, state in states.items() if state != "COMPLETA"]
+        if partial:
+            self.warn(
+                f"Cobertura no COMPLETA ({', '.join(partial)}). Los resultados pueden estar "
+                "sesgados."
+            )
+            return self.confirm("¿Continuar de todos modos?")
+        return True
+```
+
+- Con las dos fuentes en `SIN_DATOS` se sugiere la opción 2 y se vuelve al menú.
+- Si alguna fuente está `PARCIAL`, se muestra un `[AVISO]` y se pregunta `[s/N]`; solo `s`, `si` o `sí` continúan (Enter equivale a «no»).
+
+### 9.3 Dependencias inyectables y prueba de extremo a extremo
+
+**Concepto.** Para probar un programa interactivo sin escribir en el teclado, todo lo que toca el exterior se **inyecta** al construirlo: el puente con Java (y por tanto la base), la función de descarga, la fecha de hoy, la carpeta de salidas, y las funciones de entrada y salida. En producción son `input`, `print`, `openmeteo.fetch` y la fecha real; en las pruebas, respuestas programadas, una lista que captura lo impreso, la API falsa y una fecha fija.
+
+**Sintaxis básica.**
+
+```python
+respuestas = iter(["1", "7"])
+salida = []
+Menu(bridge, input_fn=lambda prompt: next(respuestas), print_fn=salida.append).run()
+```
+
+**En este proyecto.** `test_end_to_end_from_an_empty_database` recorre el flujo completo de la Fase 9 con una base temporal: cobertura (`SIN_DATOS`) → actualización confirmada (2 lotes) → cobertura (`COMPLETA`) → consulta de un día (24 registros en 2 páginas) → estadísticas → regresión → 13 gráficas PNG → salir, y comprueba que no aparece ningún `[ERROR]`. Otras pruebas cortas cubren la opción inválida, la base vacía, la actualización cancelada, la base al día, el aviso de cobertura parcial y el error del puente (JAR inexistente).
+
+El mismo flujo se ejecutó también con la API real el 2026-10-18: la carga inicial descargó 8 659 horas de ERA5 y 8 760 de PM2.5, las dos fuentes quedaron `COMPLETA` y la regresión dio los mismos números que con las muestras ([regresion.md](regresion.md#resultado-con-las-muestras)).
+
+**Cuidado.** Llamar a `input()` o a `date.today()` directamente dentro de las funciones haría el menú imposible de probar de forma automática y repetible.

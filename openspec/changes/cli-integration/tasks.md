@@ -7,8 +7,8 @@
 
 ## 2. Documentación final
 
-- [ ] 2.1 Escribir la sección 9 de `docs/implementacion.md` (menú como capa fina, dependencias inyectables, prueba de extremo a extremo) con fragmentos reales y hacer la revisión final del documento (índice completo, todos los fragmentos verificados); verificar con `uv run pytest`
-- [ ] 2.2 Actualizar `README.md` (estado, instalación y ejecución, requisitos, atribución, limitaciones), `docs/cli-y-visualizaciones.md` (menú implementado), `docs/arquitectura.md` (referencias obsoletas) y `docs/fases.md` (Fase 9 y estado final de todas las fases); verificar que no queda ningún `[Por verificar]` sin resolver o justificar
+- [x] 2.1 Escribir la sección 9 de `docs/implementacion.md` (menú como capa fina, dependencias inyectables, prueba de extremo a extremo) con fragmentos reales y hacer la revisión final del documento (índice completo, todos los fragmentos verificados); verificar con `uv run pytest`
+- [x] 2.2 Actualizar `README.md` (estado, instalación y ejecución, requisitos, atribución, limitaciones), `docs/cli-y-visualizaciones.md` (menú implementado), `docs/arquitectura.md` (referencias obsoletas) y `docs/fases.md` (Fase 9 y estado final de todas las fases); verificar que no queda ningún `[Por verificar]` sin resolver o justificar
 - [ ] 2.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up
