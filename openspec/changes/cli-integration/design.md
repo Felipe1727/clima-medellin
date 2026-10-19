@@ -23,7 +23,7 @@ Funciones disponibles: `coverage.window/today_local`, `update.current_coverage/p
 - `_guard()` para las opciones 3–6: calcula la cobertura; si las dos fuentes están `SIN_DATOS` sugiere la opción 2; si alguna no es `COMPLETA`, `[AVISO]` y confirmación `[s/N]`.
 - Opción 2: recorre el plan petición a petición llamando a `execute_plan` con un plan de una sola petición, para mostrar el progreso `[…] Descargando <fuente> <inicio> → <fin> (i/n)` y seguir si una falla. Llamadas equivalentes estimadas por petición = `ceil(días / 14)` (regla de Open-Meteo de 2 semanas por llamada con pocas variables).
 - Opción 3: fuente (1 ERA5, 2 CAMS global), fechas `AAAA-MM-DD` locales inclusive → `[inicio 00:00 local, fin + 1 día 00:00 local)`; páginas de 20 filas (Enter = siguiente, `q` = terminar).
-- Opción 6: modo (1 ventana, 2 PNG); genera 4 series, perfil, franjas, dispersión, correlación, 2 mapas de cobertura, empalmes, real frente a predicho y residuos (14 figuras).
+- Opción 6: modo (1 ventana, 2 PNG); genera 4 series, perfil, franjas, dispersión, correlación, 2 mapas de cobertura, empalmes, real frente a predicho y residuos (13 figuras).
 - Tablas en texto con `DataFrame.to_string` y números redondeados; horas siempre en hora de Medellín y UTC al lado en la opción 3.
 
 ### `cli.py`

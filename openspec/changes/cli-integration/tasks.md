@@ -2,8 +2,8 @@
 
 ## 1. Menú
 
-- [ ] 1.1 Implementar `clima_medellin/menu.py` (cabecera, bucle, opciones 1–7, avisos de cobertura, errores sin cerrar) y reescribir `cli.py` (`--version`, `--verbose`, arranque del menú); actualizar `test_cli.py`; verificar con `uv run ruff check .`
-- [ ] 1.2 Escribir `test_menu.py`: escenario de extremo a extremo (base vacía → cobertura → actualización → consulta → estadísticas → regresión → gráficas PNG → salir) y escenarios cortos (opción inválida, base vacía en la opción 4, actualización cancelada, nada que descargar, aviso de cobertura PARCIAL, error del puente); verificar con `uv run pytest`
+- [x] 1.1 Implementar `clima_medellin/menu.py` (cabecera, bucle, opciones 1–7, avisos de cobertura, errores sin cerrar) y reescribir `cli.py` (`--version`, `--verbose`, arranque del menú); actualizar `test_cli.py`; verificar con `uv run ruff check .`
+- [x] 1.2 Escribir `test_menu.py`: escenario de extremo a extremo (base vacía → cobertura → actualización → consulta → estadísticas → regresión → gráficas PNG → salir) y escenarios cortos (opción inválida, base vacía en la opción 4, actualización cancelada, nada que descargar, aviso de cobertura PARCIAL, error del puente); verificar con `uv run pytest`
 
 ## 2. Documentación final
 
