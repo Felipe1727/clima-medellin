@@ -2,8 +2,8 @@
 
 ## 1. Regresión
 
-- [ ] 1.1 Implementar `regression_dataset` en `clima_medellin/regression.py` con la prueba de filas incompletas (10 horas → 7 filas, 3 excluidas); verificar con `uv run pytest`
-- [ ] 1.2 Implementar `fit_and_evaluate` (Pipeline, línea base, métricas, coeficientes, VIF, Durbin-Watson, predicciones) con pruebas de coeficientes conocidos, escalador ajustado con el entrenamiento, separación con hueco, línea base con la media de entrenamiento, VIF alto con predictoras colineales, reproducibilidad y error con un periodo vacío; verificar con `uv run pytest`
+- [x] 1.1 Implementar `regression_dataset` en `clima_medellin/regression.py` con la prueba de filas incompletas (10 horas → 7 filas, 3 excluidas); verificar con `uv run pytest`
+- [x] 1.2 Implementar `fit_and_evaluate` (Pipeline, línea base, métricas, coeficientes, VIF, Durbin-Watson, predicciones) con pruebas de coeficientes conocidos, escalador ajustado con el entrenamiento, separación con hueco, línea base con la media de entrenamiento, VIF alto con predictoras colineales, reproducibilidad y error con un periodo vacío; verificar con `uv run pytest`
 
 ## 2. Documentación
 
