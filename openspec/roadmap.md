@@ -221,7 +221,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
       `implementacion.md`: pandas merge/join, split, Pipeline, metrics, VIF, DW.
   - Depends on: bands-stats
 
-- [ ] `visualizations` — The 9 charts with window/PNG output
+- [x] `visualizations` — The 9 charts with window/PNG output
   - Acceptance:
     - Time series per variable (gaps as line breaks), diurnal profile with shaded bands, band
       comparison box plots with valid days, PM2.5-vs-predictor scatter, correlation matrix, actual vs
