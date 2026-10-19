@@ -1,0 +1,74 @@
+{
+  "today_local": "2026-10-18",
+  "downloaded_at_utc": "2026-10-19T03:40:18Z",
+  "samples": [
+    {
+      "file": "era5_year.json",
+      "description": "ERA5: temperatura, humedad y viento de un año",
+      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=6.2447&longitude=-75.5748&elevation=1495&hourly=temperature_2m%2Crelative_humidity_2m%2Cwind_speed_10m&models=era5&wind_speed_unit=ms&timezone=GMT&start_date=2025-10-18&end_date=2026-10-17",
+      "params": {
+        "latitude": 6.2447,
+        "longitude": -75.5748,
+        "elevation": 1495,
+        "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m",
+        "models": "era5",
+        "wind_speed_unit": "ms",
+        "timezone": "GMT",
+        "start_date": "2025-10-18",
+        "end_date": "2026-10-17"
+      },
+      "start_date": "2025-10-18",
+      "end_date": "2026-10-17"
+    },
+    {
+      "file": "era5_recent_month.json",
+      "description": "ERA5: últimos 30 días (incluye los nulos finales de los días no publicados)",
+      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=6.2447&longitude=-75.5748&elevation=1495&hourly=temperature_2m%2Crelative_humidity_2m%2Cwind_speed_10m&models=era5&wind_speed_unit=ms&timezone=GMT&start_date=2026-09-18&end_date=2026-10-17",
+      "params": {
+        "latitude": 6.2447,
+        "longitude": -75.5748,
+        "elevation": 1495,
+        "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m",
+        "models": "era5",
+        "wind_speed_unit": "ms",
+        "timezone": "GMT",
+        "start_date": "2026-09-18",
+        "end_date": "2026-10-17"
+      },
+      "start_date": "2026-09-18",
+      "end_date": "2026-10-17"
+    },
+    {
+      "file": "cams_pm25_year.json",
+      "description": "CAMS global: PM2.5 de un año",
+      "url": "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=6.2447&longitude=-75.5748&hourly=pm2_5&domains=cams_global&timezone=GMT&start_date=2025-10-18&end_date=2026-10-17",
+      "params": {
+        "latitude": 6.2447,
+        "longitude": -75.5748,
+        "hourly": "pm2_5",
+        "domains": "cams_global",
+        "timezone": "GMT",
+        "start_date": "2025-10-18",
+        "end_date": "2026-10-17"
+      },
+      "start_date": "2025-10-18",
+      "end_date": "2026-10-17"
+    },
+    {
+      "file": "cams_pm25_last_week.json",
+      "description": "CAMS global: PM2.5 de los últimos 7 días",
+      "url": "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=6.2447&longitude=-75.5748&hourly=pm2_5&domains=cams_global&timezone=GMT&start_date=2026-10-11&end_date=2026-10-17",
+      "params": {
+        "latitude": 6.2447,
+        "longitude": -75.5748,
+        "hourly": "pm2_5",
+        "domains": "cams_global",
+        "timezone": "GMT",
+        "start_date": "2026-10-11",
+        "end_date": "2026-10-17"
+      },
+      "start_date": "2026-10-11",
+      "end_date": "2026-10-17"
+    }
+  ]
+}

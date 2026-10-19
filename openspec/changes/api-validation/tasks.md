@@ -2,9 +2,9 @@
 
 ## 1. Muestras de las APIs
 
-- [ ] 1.1 Implementar `python/scripts/fetch_samples.py` (peticiones como datos a partir de D en America/Bogota, descarga, `manifest.json` y `README.md` generados, comprobación de nulos finales) y verificar con `uv run ruff check .`
-- [ ] 1.2 Ejecutar el script y verificar que `samples/` contiene los cuatro JSON, `manifest.json` y `README.md` con URL, parámetros y fecha
-- [ ] 1.3 Escribir `python/tests/test_samples.py` (paso horario GMT, unidades, 8 760/8 784 pasos, PM2.5 24 valores/día sin nulos, nulos finales de ERA5 desde D−4 según el manifiesto) y verificar que `uv run pytest` pasa
+- [x] 1.1 Implementar `python/scripts/fetch_samples.py` (peticiones como datos a partir de D en America/Bogota, descarga, `manifest.json` y `README.md` generados, comprobación de nulos finales) y verificar con `uv run ruff check .`
+- [x] 1.2 Ejecutar el script y verificar que `samples/` contiene los cuatro JSON, `manifest.json` y `README.md` con URL, parámetros y fecha
+- [x] 1.3 Escribir `python/tests/test_samples.py` (paso horario GMT, unidades, 8 760/8 784 pasos, PM2.5 24 valores/día sin nulos, nulos finales de ERA5 desde D−4 según el manifiesto) y verificar que `uv run pytest` pasa
 
 ## 2. Documentación de la Fase 1
 
