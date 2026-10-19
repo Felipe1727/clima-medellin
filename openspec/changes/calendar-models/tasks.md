@@ -8,7 +8,7 @@
 ## 2. Documentación
 
 - [x] 2.1 Escribir la sección de modelos de calendario en `docs/regresion.md` (idea, rasgos, receta con coeficientes reales, evaluación con las muestras, límites), D-024 en `docs/decisiones.md`, la Fase 10 en `docs/fases.md` y la sección 10 de `docs/implementacion.md` con fragmentos reales; verificar con `uv run pytest`
-- [ ] 2.2 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
+- [x] 2.2 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up
 
