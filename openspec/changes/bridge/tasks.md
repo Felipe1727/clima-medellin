@@ -2,9 +2,9 @@
 
 ## 1. Subcomandos del JAR
 
-- [ ] 1.1 Implementar `Options`, `UsageException`, `DataException`, la lectura y escritura de JSON Lines y la clasificación de errores en `Main` (códigos 1–4), con pruebas de opción desconocida, opción sin valor, fuente inválida y `--db` que es un directorio; verificar con `mvn -q verify`
-- [ ] 1.2 Implementar `import` (validación completa antes de escribir, ubicación, lote con procedencia) con pruebas de importación correcta, repetida, archivo inexistente y líneas corruptas (JSON inválido, timestamp, valor no numérico, fuente distinta) sin cambios en la base; verificar con `mvn -q verify`
-- [ ] 1.3 Implementar `coverage` y `export` con pruebas de resumen, líneas `non_null`, base vacía, rango [from, to) ordenado y `batch_id`; verificar con `mvn -q verify`
+- [x] 1.1 Implementar `Options`, `UsageException`, `DataException`, la lectura y escritura de JSON Lines y la clasificación de errores en `Main` (códigos 1–4), con pruebas de opción desconocida, opción sin valor, fuente inválida y `--db` que es un directorio; verificar con `mvn -q verify`
+- [x] 1.2 Implementar `import` (validación completa antes de escribir, ubicación, lote con procedencia) con pruebas de importación correcta, repetida, archivo inexistente y líneas corruptas (JSON inválido, timestamp, valor no numérico, fuente distinta) sin cambios en la base; verificar con `mvn -q verify`
+- [x] 1.3 Implementar `coverage` y `export` con pruebas de resumen, líneas `non_null`, base vacía, rango [from, to) ordenado y `batch_id`; verificar con `mvn -q verify`
 
 ## 2. Puente en Python
 
