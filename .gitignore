@@ -1,0 +1,42 @@
+# Claude / OpenSpec (local only)
+.claude/CLAUDE.md
+.claude/skills/run-specs/
+
+# Runtime data (docs/arquitectura.md: "no se versiona")
+data/
+staging/
+exchange/
+*.odb
+*.odb$
+
+# Generated outputs
+outputs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Java (Maven or Gradle, not decided yet)
+target/
+build/
+.gradle/
+*.class
+
+# Secrets / environment
+.env
+.env.*
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

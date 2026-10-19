@@ -1,0 +1,204 @@
+# Arquitectura
+
+Este documento explica cómo está organizada la aplicación: qué hace Python, qué hace Java, cómo se comunican y cómo se modelan los datos en ObjectDB. El objetivo es que el estudiante pueda dibujar el flujo en una pizarra y justificar cada pieza frente a sus alternativas. Las decisiones que se apoyan en este documento son D-001 a D-004, D-010 a D-013 y D-021 ([decisiones.md](decisiones.md)).
+
+## Idea general
+
+La aplicación tiene **dos procesos con responsabilidades separadas**:
+
+- **Python** es el «cerebro»: muestra el menú, descarga datos de Open-Meteo, los limpia con Pandas, calcula la cobertura, las franjas y las estadísticas, entrena la regresión y dibuja las gráficas.
+- **Java** es el «guardián» de la base: es el único programa que abre el archivo de ObjectDB. Recibe lotes de Python y los inserta, responde preguntas sobre lo que hay guardado y exporta datos cuando Python los necesita.
+
+Una analogía: Python es el investigador y Java el archivero de una biblioteca de acceso restringido. El investigador nunca entra al depósito; entrega formularios (archivos en `staging/`) y recibe copias (archivos en `exchange/`).
+
+## Diagrama del flujo completo
+
+```text
+                         ┌────────────────────────────────────────┐
+                         │  Open-Meteo                            │
+                         │  · Historical Weather API (ERA5)       │
+                         │  · Air Quality API (CAMS global)       │
+                         └──────────────────┬─────────────────────┘
+                                            │ HTTPS, respuesta JSON
+                                            ▼
+┌───────────────────────────────── PYTHON (orquestador) ──────────────────────────────────┐
+│                                                                                          │
+│  CLI (menú de 7 opciones)                                                                │
+│    │                                                                                     │
+│    ├─► Cobertura ──────────── pide a Java «coverage» ◄── JSON por stdout                 │
+│    │       └─ calcula los intervalos faltantes (ventana móvil, latencia)                 │
+│    │                                                                                     │
+│    ├─► Ingesta ── descarga solo los faltantes ─► normaliza (Pandas: UTC, unidades,       │
+│    │              rangos, duplicados, null) ─► escribe un lote .jsonl en staging/        │
+│    │              └─ invoca a Java «import» ◄── resumen JSON por stdout                  │
+│    │                                                                                     │
+│    └─► Análisis ── invoca a Java «export» ─► lee el .jsonl de exchange/                  │
+│                   ─► DataFrame ─► franjas · estadística · regresión · gráficas           │
+│                                                                                          │
+└──────────────┬────────────────────────────▲──────────────────────────────────────────────┘
+               │ proceso hijo:              │ stdout: un único objeto JSON
+               │ java -jar … <subcomando>   │ stderr: logs
+               │ archivos: staging/ ──►     │ ◄── archivos: exchange/
+               ▼                            │ código de salida
+┌──────────────────────────────── JAVA (persistencia) ────────────────────────────────────┐
+│                                                                                          │
+│  coverage │ import │ export          JPA (EntityManager, transacciones)                  │
+│                                                │                                         │
+│                                                ▼                                         │
+│                                   ObjectDB: archivo .odb                                 │
+│                    Location · WeatherRecord · AirQualityRecord · IngestionBatch          │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Flujo paso a paso
+
+Ejemplo: el usuario elige «Actualizar datos» con la base vacía.
+
+1. **Cobertura actual.** Python ejecuta el JAR con `coverage`. Java abre la base, cuenta los registros por ubicación, fuente y variable, calcula el primer y el último timestamp y devuelve un JSON por stdout. Con la base vacía, el estado es SIN_DATOS.
+2. **Cálculo de faltantes.** Python calcula la ventana móvil (fecha actual − 1 año → fecha actual), la recorta según la latencia de cada fuente (ERA5: 5 días) y obtiene los intervalos sin datos. Ver [cobertura-y-franjas.md](cobertura-y-franjas.md#cálculo-de-faltantes-e-intervalos).
+3. **Descarga.** Para cada intervalo y fuente, Python llama a la API correspondiente con las coordenadas de la ubicación, las variables, el modelo fijado y el rango de fechas.
+4. **Normalización.** Python convierte la respuesta en un DataFrame:
+   - Timestamps en UTC.
+   - Unidades canónicas (D-022).
+   - Rangos plausibles validados; los valores imposibles pasan a `null` y quedan registrados.
+   - Duplicados eliminados dentro del lote.
+   - En PM2.5, se descartan las horas del pronóstico futuro.
+5. **Entrega a Java.** Python escribe un archivo JSON Lines en `staging/` (una línea por timestamp) y ejecuta el JAR con `import`, indicando la ruta del archivo y los metadatos del lote.
+6. **Inserción.** Java crea un IngestionBatch, lee el archivo línea a línea y, dentro de transacciones, inserta los registros nuevos y omite los que ya existen por su clave natural (D-011, D-013). Al terminar escribe por stdout un resumen JSON (recibidos, insertados, duplicados omitidos, rechazados) y termina con código 0.
+7. **Confirmación.** Python muestra el resumen y vuelve a pedir la cobertura para comprobar el nuevo estado.
+8. **Análisis** (otras opciones del menú). Python ejecuta el JAR con `export`. Java escribe en `exchange/` los registros de la ventana pedida y devuelve por stdout la ruta y el número de líneas. Python carga el archivo en un DataFrame y calcula franjas, estadísticas, la regresión o las gráficas, sin volver a tocar la base.
+
+## Protocolo de comunicación
+
+### Subcomandos
+
+| Subcomando | Entrada | Efecto | Respuesta por stdout |
+|---|---|---|---|
+| `coverage` | Ubicación y, opcionalmente, fuente y rango | Solo lectura | JSON con conteos, primer y último timestamp y, opcionalmente, la lista de timestamps existentes |
+| `import` | Ruta de un `.jsonl` en `staging/` y metadatos del lote (fuente, rango pedido, tipo NORMAL o CORRECCION) | Inserta en una o varias transacciones y crea el IngestionBatch | JSON con el id del lote y los conteos |
+| `export` | Ubicación, fuente(s), rango y ruta de destino en `exchange/` | Solo lectura | JSON con la ruta escrita y el número de líneas |
+
+Los nombres de los argumentos y si `coverage` devuelve la lista completa de timestamps o solo los intervalos se fijan en la Fase 4 [Por verificar, Fase 4]. Con ~8 760 timestamps por fuente, la lista completa sería un JSON de unos cientos de KB, manejable [Supuesto]; aun así, es más limpio que Java devuelva los intervalos ya agrupados o los escriba en `exchange/` [Recomendación].
+
+### Reglas de stdout y stderr
+
+- **stdout contiene exactamente un objeto JSON** al final de la ejecución, y nada más. Python lo interpreta como respuesta. Cualquier otro texto en stdout rompería el análisis de la respuesta.
+- **stderr recibe todos los logs** (progreso, avisos, trazas de excepciones). Python puede mostrarlos u ocultarlos según un nivel de detalle.
+- Si algo falla, Java escribe igualmente, si puede, un JSON de error por stdout (con un tipo y un mensaje) y termina con un código distinto de 0.
+
+### Códigos de salida (propuesta)
+
+| Código | Significado |
+|---|---|
+| 0 | Éxito (puede incluir duplicados omitidos, que no son error) |
+| 1 | Error de uso: subcomando o argumentos inválidos |
+| 2 | Error de datos: archivo inexistente, línea JSON inválida o violación de esquema |
+| 3 | Error de base de datos: no se puede abrir el archivo, está bloqueado o falla una transacción |
+| 4 | Error inesperado |
+
+[Recomendación] Separar los códigos permite a Python dar mensajes útiles («la base está en uso por otro proceso» frente a «el lote tiene una línea corrupta»). Se fijan en la Fase 4 (DP-05).
+
+### Formato JSON Lines
+
+- Codificación UTF-8, una línea por registro y sin comas entre líneas.
+- Timestamps en ISO 8601 con zona `Z` (UTC).
+- Ausentes como `null` (D-012); nunca 0 ni cadena vacía.
+- Unidades en el nombre del campo (D-022).
+- Un archivo contiene registros de una sola fuente.
+
+**Ejemplo ficticio** (los valores son inventados y no proceden de ninguna API; ilustran solo el formato de una línea de `staging/` para meteorología):
+
+```text
+{"location_code": "MED-CENTRO", "source": "ERA5", "timestamp_utc": "2026-03-01T13:00:00Z", "temperature_2m_c": 21.4, "relative_humidity_2m_pct": 78.0, "wind_speed_10m_ms": null}
+```
+
+En el ejemplo, `wind_speed_10m_ms` es `null`: ese valor no llegó en la respuesta y no debe confundirse con calma (0 m/s).
+
+### Ciclo de vida de los archivos
+
+- `staging/`: Python crea el archivo, Java lo lee y, si el import termina con éxito, Python lo borra o lo mueve a un histórico [decisión de la Fase 4].
+- `exchange/`: Java lo crea y Python lo lee. Se puede sobrescribir en cada exportación.
+- Ambas carpetas son temporales y no se versionan en git [Recomendación].
+
+## Modelo de clases
+
+### Entidades
+
+| Entidad | Propósito | Campos principales (propuesta) | Clave natural | Relaciones |
+|---|---|---|---|---|
+| **Location** | Punto geográfico del que se piden datos | id técnico, `code` (p. ej. «MED-CENTRO»), nombre, latitud, longitud, elevación (m), zona horaria («America/Bogota») | `code` | Referenciada por los registros y los lotes |
+| **WeatherRecord** | Un paso horario de meteorología | id técnico, ubicación, fuente («ERA5»), `timestampUtc`, `temperature2mC`, `relativeHumidity2mPct`, `windSpeed10mMs` (los tres admiten null), lote | ubicación + fuente + `timestampUtc` | Muchos a uno con Location; muchos a uno con IngestionBatch |
+| **AirQualityRecord** | Un paso de calidad del aire | id técnico, ubicación, fuente («CAMS_GLOBAL»), `timestampUtc`, `pm25UgM3` (admite null), lote | ubicación + fuente + `timestampUtc` | Muchos a uno con Location; muchos a uno con IngestionBatch |
+| **IngestionBatch** | Procedencia: una descarga concreta | id técnico, identificador del lote, fuente, ubicación, tipo (NORMAL o CORRECCION), inicio y fin pedidos (UTC), momento de la ingesta (UTC), endpoint y parámetros usados, conteos (recibidos, insertados, duplicados, rechazados), notas | identificador del lote | Uno a muchos con los registros (navegable desde el registro) |
+
+```text
+              ┌──────────────┐
+              │   Location   │
+              └──────┬───────┘
+          1          │ 1            1
+   ┌─────────────────┼──────────────────┐
+   │ *               │ *                │ *
+┌──▼────────────┐ ┌──▼──────────────┐ ┌─▼───────────────┐
+│ WeatherRecord │ │ AirQualityRecord│ │ IngestionBatch  │
+└──────┬────────┘ └──────┬──────────┘ └─▲───────────────┘
+       │ *               │ *            │ 1
+       └─────────────────┴──────────────┘
+         cada registro apunta al lote que lo insertó
+```
+
+### Notas de diseño
+
+- **Clave natural y unicidad.** ObjectDB admite índices únicos compuestos y lanza una `PersistenceException` al confirmar una transacción con duplicados [Verificado: [ObjectDB – índices](https://www.objectdb.com/java/jpa/entity/index)]. Si el índice puede incluir el campo de relación con Location o si conviene repetir `location_code` como campo simple está [Por verificar, Fase 2].
+- **Duplicados sin abortar el lote.** Como la excepción llega al confirmar, un solo duplicado podría deshacer toda la transacción. [Recomendación]: comprobar antes la existencia de cada clave (o del conjunto de claves del rango) y confirmar en bloques pequeños, para que un fallo afecte solo a un bloque.
+- **Tipo del timestamp.** El tipo temporal de Java que admite ObjectDB (instante, fecha-hora local o fecha clásica) está [Por verificar, Fase 2]. El valor guardado debe representar UTC sin ambigüedad.
+- **Claves primarias compuestas.** ObjectDB las admite [Verificado: [ObjectDB – claves primarias](https://www.objectdb.com/java/jpa/entity/id)], pero se recomienda un id técnico más un índice único sobre la clave natural, porque es más sencillo de manejar [Recomendación].
+- **Límites de la versión gratuita.** Hay 4 clases de entidad, frente a un máximo de 10, y unas 17 500 entidades por año, frente a un máximo de un millón por archivo [Verificado: [ObjectDB – compra](https://www.objectdb.com/database/purchase)]. Las clases que ObjectDB no encuentra al cargar un archivo antiguo podrían contar contra el límite [Supuesto: según un hilo del foro oficial; no se usará como fuente].
+- **Versión y Java.** ObjectDB 2.9.5 (publicada el 2026-03-02) requiere Java 8 o superior con la variante `javax` y Java 17 o superior con la variante `jakarta` [Verificado: [ObjectDB – descarga](https://www.objectdb.com/download)]. La variante se elige en la Fase 2 (DP-07).
+- **Apertura de la base.** Basta con una URL `objectdb:` y la ruta del archivo; si el archivo no existe, se crea. No hace falta `persistence.xml` [Verificado: [ObjectDB – conexión](https://www.objectdb.com/java/jpa/start/connection)].
+
+## Justificación frente a alternativas descartadas
+
+| Alternativa | Qué sería | Por qué se descarta |
+|---|---|---|
+| **CSV** para el intercambio | Tablas de texto separadas por comas | No distingue bien `null` de una cadena vacía, depende del separador decimal y de la configuración regional, y no tiene tipos. JSON Lines conserva `null`, números y cadenas, y sigue permitiendo procesar línea a línea. |
+| **Servidor HTTP local** en Java | Java como servicio REST en localhost | Exige gestionar el ciclo de vida de un servidor (arranque, puerto, parada) y añade complejidad de red sin beneficio en una CLI de un solo usuario. Las llamadas por proceso son más fáciles de probar a mano. |
+| **Py4J** u otro puente en memoria | Python llama a objetos Java dentro de una JVM compartida | Acopla los dos lenguajes, complica la depuración y añade una dependencia; los errores de un lado se manifiestan de formas poco claras en el otro. El protocolo por procesos y archivos se puede inspeccionar con un editor de texto. |
+| **Entidades combinadas** (una fila con meteorología y PM2.5) | Una entidad «Observación» con las 4 variables | Las fuentes tienen pasos (1 h frente a 3 h), latencias (5 días frente a horas) y lotes distintos. Una fila combinada estaría a medio llenar casi siempre y no permitiría saber qué lote aportó cada valor. |
+| **Persistir las franjas** | Una entidad con los promedios por franja | Es un dato derivado: si cambia la regla (D-009 está pendiente de revisión), habría que recalcular y migrar. Consumiría además una de las 10 clases gratuitas. Calcularlas en Python es barato (D-021). |
+| Python lee el `.odb` directamente | — | No es un formato documentado y la licencia prohíbe la ingeniería inversa [Verificado: [ObjectDB – licencia](https://www.objectdb.com/database/license)]. |
+
+## Estructura de directorios prevista
+
+Esta es la **estructura planificada**; todavía no existe nada salvo `docs/` y `README.md`.
+
+```text
+clima-medellin/
+├── README.md
+├── docs/                 documentación (este conjunto de .md)
+├── python/               CLI, cliente HTTP, normalización, cobertura, franjas,
+│                         estadística, regresión y visualizaciones
+├── java/                 proyecto Java: entidades JPA y subcomandos del JAR
+├── data/                 archivo .odb de ObjectDB (no se versiona)
+├── staging/              lotes .jsonl de Python hacia Java (temporal, no se versiona)
+├── exchange/             exportaciones .jsonl de Java hacia Python (temporal, no se versiona)
+├── samples/              respuestas de las APIs guardadas en la Fase 1
+└── outputs/              gráficas PNG generadas
+```
+
+La organización interna de `python/` y `java/` (módulos, paquetes, herramienta de construcción) se decide en las fases 2–4.
+
+## Fuentes consultadas
+
+- ObjectDB, Download: https://www.objectdb.com/download
+- ObjectDB, License: https://www.objectdb.com/database/license
+- ObjectDB, Purchase (límites de la versión gratuita): https://www.objectdb.com/database/purchase
+- ObjectDB Manual, conexión: https://www.objectdb.com/java/jpa/start/connection
+- ObjectDB Manual, claves primarias: https://www.objectdb.com/java/jpa/entity/id
+- ObjectDB Manual, índices: https://www.objectdb.com/java/jpa/entity/index
+
+## Limitaciones y supuestos
+
+- Los campos de las entidades son una propuesta; los nombres exactos y los tipos se fijan en la Fase 2.
+- No se ha probado ObjectDB en este equipo: la creación del archivo, los índices únicos y el comportamiento ante duplicados están documentados, pero no verificados en la práctica (Fase 2).
+- Se supone un único usuario y un único proceso Java a la vez. Cómo se comporta el archivo con dos procesos simultáneos está [Por verificar, Fase 4].
+- El coste de arrancar la JVM en cada subcomando se considera aceptable sin haberlo medido [Supuesto].
