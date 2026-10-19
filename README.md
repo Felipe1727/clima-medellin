@@ -24,7 +24,7 @@ Proyecto universitario para la asignatura de **Bases de Datos**. Es una aplicaci
 
 ## Estado actual
 
-**Fase 0: documentación y diseño.** Todavía no hay código. El plan completo y el seguimiento están en [docs/fases.md](docs/fases.md). La siguiente fase es la **validación de las APIs** (Fase 1).
+**Implementación en curso.** La documentación de diseño está terminada y el esqueleto del proyecto (proyectos Java y Python, integración continua y guía técnica) ya existe. El plan y el seguimiento están en [docs/fases.md](docs/fases.md); el orden de implementación, en [openspec/roadmap.md](openspec/roadmap.md).
 
 ## Documentación
 
@@ -38,22 +38,25 @@ Proyecto universitario para la asignatura de **Bases de Datos**. Es una aplicaci
 | [docs/cli-y-visualizaciones.md](docs/cli-y-visualizaciones.md) | Menú de la CLI, gráficas previstas, salida en ventana o PNG y mensajes en la terminal. |
 | [docs/decisiones.md](docs/decisiones.md) | Registro de decisiones (D-001…) con contexto, opciones, consecuencias y estado. |
 | [docs/glosario.md](docs/glosario.md) | Definiciones breves de los términos técnicos usados. |
+| [docs/implementacion.md](docs/implementacion.md) | Guía técnica de la implementación: llamadas a ObjectDB, inserción y consulta, puente Java↔Python, análisis y gráficas, con ejemplos y fragmentos reales del código verificados por las pruebas. |
 
-## Plan de carpetas (previsto)
+## Estructura de carpetas
 
-Esta es la estructura **planificada**; por ahora solo existen `README.md` y `docs/`. El detalle está en [docs/arquitectura.md](docs/arquitectura.md#estructura-de-directorios-prevista).
+Las carpetas marcadas como *(se crea al ejecutar)* aparecen la primera vez que se usa la aplicación y no se versionan. El detalle está en [docs/arquitectura.md](docs/arquitectura.md#estructura-de-directorios-prevista).
 
 ```text
 clima-medellin/
 ├── README.md
-├── docs/        documentación
-├── python/      CLI, ingesta, análisis y gráficas
-├── java/        entidades JPA y subcomandos del JAR (coverage, import, export)
-├── data/        archivo de ObjectDB
-├── staging/     lotes JSON Lines de Python hacia Java
-├── exchange/    exportaciones JSON Lines de Java hacia Python
-├── samples/     respuestas de las APIs de la Fase 1
-└── outputs/     gráficas PNG
+├── .github/workflows/  integración continua (instalar, probar, analizar)
+├── docs/               documentación de diseño y guía técnica
+├── openspec/           roadmap y especificaciones (OpenSpec)
+├── java/               proyecto Maven: entidades JPA y subcomandos del JAR (coverage, import, export)
+├── python/             proyecto uv: CLI, ingesta, análisis y gráficas (src/clima_medellin, tests)
+├── samples/            respuestas de las APIs guardadas en la Fase 1
+├── data/               archivo de ObjectDB (se crea al ejecutar)
+├── staging/            lotes JSON Lines de Python hacia Java (se crea al ejecutar)
+├── exchange/           exportaciones JSON Lines de Java hacia Python (se crea al ejecutar)
+└── outputs/            gráficas PNG (se crea al ejecutar)
 ```
 
 ## Requisitos (previstos, por verificar)
