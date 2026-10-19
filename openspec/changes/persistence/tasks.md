@@ -12,8 +12,8 @@
 
 ## 3. Documentación
 
-- [ ] 3.1 Escribir la sección 2 de `docs/implementacion.md` (EntityManagerFactory, anotaciones, `@Unique`, transacciones, `persist`, consulta JPQL, `JOIN`, agregaciones, `null`) con fragmentos reales, y verificar que `uv run pytest` (prueba de fragmentos) pasa
-- [ ] 3.2 Actualizar `docs/arquitectura.md` (PV-13, PV-14, entidades definitivas, registros de ObjectDB), `docs/decisiones.md` (D-010, D-011) y `docs/fases.md` (Fase 2 completada, PV-13 y PV-14 resueltos); verificar que no quedan `[Por verificar, Fase 2]`
+- [x] 3.1 Escribir la sección 2 de `docs/implementacion.md` (EntityManagerFactory, anotaciones, `@Unique`, transacciones, `persist`, consulta JPQL, `JOIN`, agregaciones, `null`) con fragmentos reales, y verificar que `uv run pytest` (prueba de fragmentos) pasa
+- [x] 3.2 Actualizar `docs/arquitectura.md` (PV-13, PV-14, entidades definitivas, registros de ObjectDB), `docs/decisiones.md` (D-010, D-011) y `docs/fases.md` (Fase 2 completada, PV-13 y PV-14 resueltos); verificar que no quedan `[Por verificar, Fase 2]`
 - [ ] 3.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

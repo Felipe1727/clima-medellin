@@ -124,12 +124,12 @@ En el ejemplo, `wind_speed_10m_ms` es `null`: ese valor no llegó en la respuest
 
 ### Entidades
 
-| Entidad | Propósito | Campos principales (propuesta) | Clave natural | Relaciones |
+| Entidad | Propósito | Campos principales (definitivos, Fase 2) | Clave natural | Relaciones |
 |---|---|---|---|---|
 | **Location** | Punto geográfico del que se piden datos | id técnico, `code` (p. ej. «MED-CENTRO»), nombre, latitud, longitud, elevación (m), zona horaria («America/Bogota») | `code` | Referenciada por los registros y los lotes |
 | **WeatherRecord** | Un paso horario de meteorología | id técnico, ubicación, fuente («ERA5»), `timestampUtc`, `temperature2mC`, `relativeHumidity2mPct`, `windSpeed10mMs` (los tres admiten null), lote | ubicación + fuente + `timestampUtc` | Muchos a uno con Location; muchos a uno con IngestionBatch |
 | **AirQualityRecord** | Un paso de calidad del aire | id técnico, ubicación, fuente («CAMS_GLOBAL»), `timestampUtc`, `pm25UgM3` (admite null), lote | ubicación + fuente + `timestampUtc` | Muchos a uno con Location; muchos a uno con IngestionBatch |
-| **IngestionBatch** | Procedencia: una descarga concreta | id técnico, identificador del lote, fuente, ubicación, tipo (NORMAL o CORRECCION), inicio y fin pedidos (UTC), momento de la ingesta (UTC), endpoint y parámetros usados, conteos (recibidos, insertados, duplicados, rechazados), notas | identificador del lote | Uno a muchos con los registros (navegable desde el registro) |
+| **IngestionBatch** | Procedencia: una descarga concreta | id técnico, identificador del lote (`batchId`, UUID en texto), fuente, ubicación, tipo (siempre `NORMAL`, DP-04), inicio y fin pedidos (UTC), momento de la ingesta (UTC), endpoint y parámetros usados, conteos (recibidos, insertados, duplicados, rechazados), notas | identificador del lote | Uno a muchos con los registros (navegable desde el registro) |
 
 ```text
               ┌──────────────┐
@@ -148,13 +148,14 @@ En el ejemplo, `wind_speed_10m_ms` es `null`: ese valor no llegó en la respuest
 
 ### Notas de diseño
 
-- **Clave natural y unicidad.** ObjectDB admite índices únicos compuestos y lanza una `PersistenceException` al confirmar una transacción con duplicados [Verificado: [ObjectDB – índices](https://www.objectdb.com/java/jpa/entity/index)]. Si el índice puede incluir el campo de relación con Location o si conviene repetir `location_code` como campo simple está [Por verificar, Fase 2].
-- **Duplicados sin abortar el lote.** Como la excepción llega al confirmar, un solo duplicado podría deshacer toda la transacción. [Recomendación]: comprobar antes la existencia de cada clave (o del conjunto de claves del rango) y confirmar en bloques pequeños, para que un fallo afecte solo a un bloque.
-- **Tipo del timestamp.** El tipo temporal de Java que admite ObjectDB (instante, fecha-hora local o fecha clásica) está [Por verificar, Fase 2]. El valor guardado debe representar UTC sin ambigüedad.
+- **Clave natural y unicidad.** ObjectDB admite índices únicos compuestos y lanza una `PersistenceException` al confirmar una transacción con duplicados [Verificado: [ObjectDB – índices](https://www.objectdb.com/java/jpa/entity/index)]. El índice `@Unique(members = {"location", "source", "timestampUtc"})` (anotación `javax.jdo.annotations.Unique`, incluida en ObjectDB) **admite el campo de relación** con Location, así que no se repite el código de la ubicación [Verificado: prueba `databaseRejectsADuplicateNaturalKeyEvenWithoutTheService`, Fase 2].
+- **Duplicados sin abortar el lote.** Como la excepción llega al confirmar, un solo duplicado podría deshacer toda la transacción. Implementación (Fase 2): se cargan antes los timestamps existentes del rango del lote, se descartan los duplicados (de la base y del propio lote), se rechazan las filas sin timestamp o con todo a `null`, y se confirma en bloques de 500; si un bloque falla, sus registros se reintentan uno a uno. Ver [implementacion.md](implementacion.md#25-insertar-un-lote-duplicados-y-bloques-de-500).
+- **Tipo del timestamp.** Se usa `java.time.Instant`, que representa un instante UTC sin ambigüedad. ObjectDB lo guarda y lo devuelve exacto aunque la JVM que lee tenga otra zona horaria [Verificado: prueba `timestampRoundTripsExactlyInAnotherJvmTimeZone`, Fase 2].
 - **Claves primarias compuestas.** ObjectDB las admite [Verificado: [ObjectDB – claves primarias](https://www.objectdb.com/java/jpa/entity/id)], pero se recomienda un id técnico más un índice único sobre la clave natural, porque es más sencillo de manejar [Recomendación].
 - **Límites de la versión gratuita.** Hay 4 clases de entidad, frente a un máximo de 10, y unas 17 500 entidades por año, frente a un máximo de un millón por archivo [Verificado: [ObjectDB – compra](https://www.objectdb.com/database/purchase)]. Las clases que ObjectDB no encuentra al cargar un archivo antiguo podrían contar contra el límite [Supuesto: según un hilo del foro oficial; no se usará como fuente].
-- **Versión y Java.** ObjectDB 2.9.5 (publicada el 2026-03-02) requiere Java 8 o superior con la variante `javax` y Java 17 o superior con la variante `jakarta` [Verificado: [ObjectDB – descarga](https://www.objectdb.com/download)]. La variante se elige en la Fase 2 (DP-07).
-- **Apertura de la base.** Basta con una URL `objectdb:` y la ruta del archivo; si el archivo no existe, se crea. No hace falta `persistence.xml` [Verificado: [ObjectDB – conexión](https://www.objectdb.com/java/jpa/start/connection)].
+- **Versión y Java.** ObjectDB 2.9.5 (publicada el 2026-03-02) requiere Java 8 o superior con la variante `javax` y Java 17 o superior con la variante `jakarta` [Verificado: [ObjectDB – descarga](https://www.objectdb.com/download)]. Se usa la variante `jakarta` (`objectdb-jk`) con Java 25 (DP-07); ObjectDB declara la API de JPA como `provided`, así que el proyecto añade `jakarta.persistence-api` 3.1.0 para incluirla en el JAR.
+- **Apertura de la base.** Basta con una URL `objectdb:` y la ruta del archivo; si el archivo no existe, se crea. No hace falta `persistence.xml` [Verificado: [ObjectDB – conexión](https://www.objectdb.com/java/jpa/start/connection)]. Al abrir, las cuatro entidades se registran con `em.getMetamodel().entity(...)`: sin ello, consultar una entidad que aún no tiene objetos falla con «Type ... is not found» [Verificado: Fase 2].
+- **Archivos auxiliares de ObjectDB.** ObjectDB escribe sus registros internos en un directorio `log/` junto al JAR que lo contiene (`java/target/log/`, ignorado por git) y, con Java 25, imprime en stderr un aviso sobre `sun.misc.Unsafe`; stdout no se ve afectado [Verificado: Fase 2].
 
 ## Justificación frente a alternativas descartadas
 
@@ -198,7 +199,7 @@ La organización interna de `python/` y `java/` (módulos, paquetes, herramienta
 
 ## Limitaciones y supuestos
 
-- Los campos de las entidades son una propuesta; los nombres exactos y los tipos se fijan en la Fase 2.
-- No se ha probado ObjectDB en este equipo: la creación del archivo, los índices únicos y el comportamiento ante duplicados están documentados, pero no verificados en la práctica (Fase 2).
+- Los campos y los tipos de las entidades quedaron fijados en la Fase 2 (`java/src/main/java/co/climamedellin/entities/`).
+- La creación del archivo, el índice único y el comportamiento ante duplicados se verificaron en la Fase 2 con las pruebas de `RecordStoreTest`.
 - Se supone un único usuario y un único proceso Java a la vez. Cómo se comporta el archivo con dos procesos simultáneos está [Por verificar, Fase 4].
 - El coste de arrancar la JVM en cada subcomando se considera aceptable sin haberlo medido [Supuesto].

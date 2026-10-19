@@ -10,7 +10,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 |---|---|---|---|
 | 0 | Documentación y diseño | [x] | — |
 | 1 | Validación de las APIs | [x] | 0 |
-| 2 | Modelo de datos y persistencia en ObjectDB | [ ] | 0 |
+| 2 | Modelo de datos y persistencia en ObjectDB | [x] | 0 |
 | 3 | Ingesta y normalización en Python | [ ] | 1 |
 | 4 | Puente Java↔Python | [ ] | 2, 3 |
 | 5 | Cobertura histórica e incrementos | [ ] | 4 |
@@ -86,10 +86,10 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** comprobar que ObjectDB, con JPA, guarda las cuatro entidades, impide duplicados por la clave natural y conserva los datos tras cerrar y reabrir la base.
 
 **Entregables:**
-- [ ] Versión de Java instalada y variante de ObjectDB (`javax` o `jakarta`) elegidas (DP-07).
-- [ ] Entidades Location, WeatherRecord, AirQualityRecord e IngestionBatch definidas según [arquitectura.md](arquitectura.md#modelo-de-clases).
-- [ ] Prueba documentada: insertar, intentar un duplicado, cerrar, reabrir y consultar.
-- [ ] Mecanismo de lote de corrección decidido (DP-04).
+- [x] Versión de Java instalada y variante de ObjectDB elegidas (DP-07): Java 25 y `objectdb-jk` (jakarta).
+- [x] Entidades Location, WeatherRecord, AirQualityRecord e IngestionBatch definidas según [arquitectura.md](arquitectura.md#modelo-de-clases) (`java/src/main/java/co/climamedellin/entities/`).
+- [x] Prueba documentada: insertar, intentar un duplicado, cerrar, reabrir y consultar (`RecordStoreTest`, explicada en [implementacion.md](implementacion.md#2-objectdb-entidades-transacciones-inserción-y-consultas-jpql)).
+- [x] Mecanismo de lote de corrección decidido (DP-04): no se implementan correcciones.
 
 **Conceptos que se estudiarán:**
 - *Entidad y EntityManager*: cómo JPA convierte objetos en registros persistentes.
@@ -105,9 +105,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 0. Puede hacerse en paralelo a la Fase 1.
 
-**Decisiones abiertas:** DP-04, DP-07; se confirma D-010 y la implementación de D-011.
+**Decisiones abiertas:** DP-04 y DP-07 (resueltas el 2026-10-18); D-010 y la implementación de D-011 confirmadas.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 
@@ -334,8 +334,8 @@ Todas se resolvieron en la sesión de exploración del 2026-10-18, con los resul
 | PV-10 | Rango máximo de fechas por petición | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: no documentado; un año funciona en una petición |
 | PV-11 | Texto de atribución exigido para CAMS global | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: texto adoptado en fuentes-y-datos.md |
 | PV-12 | Si CAMS usa meteorología del ECMWF (IFS) como entrada | [regresion.md](regresion.md) | Fase 1 | Resuelto: sí, CAMS se ejecuta con el IFS |
-| PV-13 | Índice único compuesto que incluya una relación con Location | [arquitectura.md](arquitectura.md) | Fase 2 | Pendiente |
-| PV-14 | Tipo temporal de Java admitido por ObjectDB para timestamps UTC | [arquitectura.md](arquitectura.md) | Fase 2 | Pendiente |
+| PV-13 | Índice único compuesto que incluya una relación con Location | [arquitectura.md](arquitectura.md) | Fase 2 | Resuelto: el índice admite la relación con Location |
+| PV-14 | Tipo temporal de Java admitido por ObjectDB para timestamps UTC | [arquitectura.md](arquitectura.md) | Fase 2 | Resuelto: `java.time.Instant`, exacto en cualquier zona horaria |
 | PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
 | PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 | Pendiente |
 | PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 | Pendiente |
