@@ -315,7 +315,7 @@ range of up to 31 days, evaluated honestly against a baseline.
     - Docs: D-025, `cli-y-visualizaciones.md` (new menu and screens), `implementacion.md` section on rich.
   - Depends on: calendar-models
 
-- [ ] `prediction-menu` — Prediction option, model evaluation screen and new chart
+- [x] `prediction-menu` — Prediction option, model evaluation screen and new chart
   - Acceptance:
     - Option 6: "Desde"/"Hasta" prompts with the locked formats and limits; single hour, day and
       range; three variables side by side with "error típico"; real + difference for stored hours,
