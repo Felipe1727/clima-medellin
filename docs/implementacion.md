@@ -52,7 +52,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [2. ObjectDB: entidades, transacciones, inserción y consultas JPQL](#2-objectdb-entidades-transacciones-inserción-y-consultas-jpql) | Disponible | `persistence` |
 | [3. Descarga de Open-Meteo y normalización con Pandas](#3-descarga-de-open-meteo-y-normalización-con-pandas) | Disponible | `ingest` |
 | [4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python](#4-puente-javapython-subprocesos-json-lines-y-de-objectdb-a-python) | Disponible | `bridge` |
-| 5. Ventana móvil, cobertura e intervalos faltantes | Pendiente | `coverage` |
+| [5. Ventana móvil, cobertura e intervalos faltantes](#5-ventana-móvil-cobertura-e-intervalos-faltantes) | Disponible | `coverage` |
 | 6. Zonas horarias, franjas y estadística descriptiva | Pendiente | `bands-stats` |
 | 7. Unión de datos, split temporal y regresión | Pendiente | `regression` |
 | 8. Gráficas con Matplotlib | Pendiente | `visualizations` |
@@ -779,3 +779,199 @@ tabla = bridge.export("ERA5", inicio_utc, fin_utc)     # DataFrame indexado por 
 | `exchange/` | Java | `export-<fuente>.jsonl`, `coverage-<fuente>.jsonl` (nombre fijo) | Se sobrescribe en cada llamada; nunca se borra automáticamente |
 
 **Cuidado.** Un lote fallido en `staging/` es una pista, no basura: abrirlo con un editor muestra la línea exacta que Java rechazó.
+
+---
+
+## 5. Ventana móvil, cobertura e intervalos faltantes
+
+El código está en `python/src/clima_medellin/coverage.py` (funciones puras: no usan red ni base) y `update.py` (el flujo de actualización). Las reglas de diseño están en [cobertura-y-franjas.md](cobertura-y-franjas.md). Las pruebas son `test_coverage.py` (unitarias) y `test_update.py` (JAR real, base temporal y una API falsa que sirve valores de las muestras).
+
+### 5.1 La ventana móvil y el 29 de febrero
+
+**Concepto.** El proyecto analiza siempre **el último año**: de las 00:00 locales del mismo día del año anterior a las 00:00 locales de hoy (D-016). La fecha de referencia es la de Medellín, no la UTC, y los extremos se convierten a UTC para compararlos con los datos guardados. Si hoy es 29 de febrero, «el mismo día del año anterior» no existe y se usa el 28 (DP-09).
+
+**Sintaxis básica.**
+
+```python
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
+
+hoy = date(2026, 10, 18)
+inicio = hoy.replace(year=hoy.year - 1)                       # 2025-10-18
+medianoche = datetime.combine(inicio, time.min, tzinfo=ZoneInfo("America/Bogota"))
+medianoche.astimezone(ZoneInfo("UTC"))                        # 2025-10-18 05:00:00+00:00
+date(2028, 2, 29).replace(year=2027)                          # ValueError: day is out of range
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/coverage.py -->
+```python
+def one_year_before(day: date) -> date:
+    """Mismo día del año anterior; el 29 de febrero pasa al 28 de febrero (DP-09)."""
+    try:
+        return day.replace(year=day.year - 1)
+    except ValueError:
+        return day.replace(year=day.year - 1, day=28)
+
+
+def _local_midnight_utc(day: date) -> datetime:
+    return datetime.combine(day, time.min, tzinfo=LOCAL_TZ).astimezone(UTC)
+
+
+def window(today: date) -> Window:
+    """Ventana [mismo día del año anterior, hoy) a las 00:00 locales, con extremos en UTC."""
+    start = one_year_before(today)
+    return Window(start, today, _local_midnight_utc(start), _local_midnight_utc(today))
+```
+
+- `day.replace(year=...)` lanza `ValueError` solo con el 29 de febrero; el `except` lo sustituye por el 28.
+- `_local_midnight_utc` crea las 00:00 en America/Bogota y las pasa a UTC (las 05:00 UTC).
+- La ventana no siempre tiene 365 días: con D = 2028-03-01 tiene 366 porque incluye el 29-02-2028. Por eso los pasos esperados se calculan siempre a partir de la ventana real, nunca se fijan en 8 760.
+
+| D (hoy) | Inicio | Días | Probado en |
+|---|---|---|---|
+| 2026-10-09 | 2025-10-09 | 365 | `test_window_days` |
+| 2028-02-29 | 2027-02-28 | 366 | `test_window_days` |
+| 2028-03-01 | 2027-03-01 | 366 | `test_window_days` |
+| 2029-03-01 | 2028-03-01 | 365 | `test_window_days` |
+
+**Cuidado.** Usar `date.today()` (la fecha del sistema, que puede estar en UTC) en lugar de la fecha de Medellín haría que, a partir de las 19:00 locales, la ventana avanzara un día antes de tiempo. `coverage.today_local()` usa siempre America/Bogota.
+
+### 5.2 El fin efectivo de cada fuente
+
+**Concepto.** No tiene sentido esperar datos que la fuente aún no publica. El **fin efectivo** es el primer instante que ya no se espera ni se guarda: para ERA5, las 00:00 UTC de D−4 (el día D−5 llega completo, PV-04); para CAMS, el fin de la ventana.
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/coverage.py -->
+```python
+def effective_end(source: str, win: Window, today: date) -> datetime:
+    """Primer instante UTC que ya no se espera ni se guarda para la fuente (exclusivo)."""
+    if source == "ERA5":
+        first_unpublished_day = today - timedelta(days=ERA5_LAST_FULL_DAY_OFFSET - 1)
+        published_until = datetime.combine(first_unpublished_day, time.min, tzinfo=UTC)
+        return min(win.end_utc, published_until)
+    return win.end_utc
+```
+
+Con D = 2026-10-18: ERA5 termina en `2026-10-14T00:00Z` y CAMS en `2026-10-18T05:00Z`. La normalización (sección 3.4) elimina cualquier valor en o después de ese instante.
+
+### 5.3 Esperados frente a existentes: los faltantes
+
+**Concepto.** Se comparan dos **conjuntos**: las horas que deberían existir (todas las horas en punto de `[inicio, fin efectivo)`) y las que existen en la base. Su **diferencia** son los faltantes. Pandas trabaja con índices de fechas como si fueran conjuntos.
+
+**Sintaxis básica.**
+
+```python
+import pandas as pd
+
+esperados = pd.date_range("2026-03-01 00:00", "2026-03-01 05:00", freq="h", tz="UTC")
+existentes = esperados.delete([2, 3])                 # faltan las 02:00 y las 03:00
+esperados.difference(existentes)                      # DatetimeIndex(['2026-03-01 02:00', '2026-03-01 03:00'])
+```
+
+**En este proyecto.** `expected_steps(inicio, fin)` construye el índice horario con `pd.date_range(..., freq="h", inclusive="left")` (el extremo final queda fuera) y `missing_steps(esperados, existentes)` devuelve `esperados.difference(existentes)`. Los existentes son los timestamps que devuelve el subcomando `coverage` del JAR (sección 4). Como nunca se guardan filas sin ningún dato (DP-12), «existe un registro» significa «hay al menos un valor real».
+
+### 5.4 Agrupar faltantes en intervalos y en peticiones por fecha
+
+**Concepto.** Pedir hora a hora sería absurdo: las horas consecutivas se agrupan en **intervalos**, y como la API recibe **fechas** (días completos), cada intervalo se convierte en un rango de fechas UTC. Los rangos que, ya en días, se tocan o se solapan se fusionan en una sola petición.
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/coverage.py -->
+```python
+    intervals: list[tuple[pd.Timestamp, pd.Timestamp]] = []
+    for ts in steps.sort_values():
+        if intervals and ts - intervals[-1][1] == STEP:
+            intervals[-1] = (intervals[-1][0], ts)
+        else:
+            intervals.append((ts, ts))
+    return intervals
+```
+
+- Se recorren los faltantes en orden. Si la hora actual está justo una hora (`STEP`) después del final del intervalo abierto, lo amplía; si no, abre uno nuevo.
+
+<!-- fragmento: python/src/clima_medellin/coverage.py -->
+```python
+    requests: list[tuple[date, date]] = []
+    for first, last in intervals:
+        start, end = first.date(), last.date()
+        if requests and start <= requests[-1][1] + timedelta(days=1):
+            requests[-1] = (requests[-1][0], max(requests[-1][1], end))
+        else:
+            requests.append((start, end))
+    return requests
+```
+
+- Cada intervalo pasa a `(fecha de su primera hora, fecha de su última hora)`.
+- Si el nuevo rango empieza como mucho un día después del final del anterior, se fusionan (dos peticiones de días contiguos serían una sola).
+
+Ejemplo de la documentación (prueba `test_documentation_example_yields_two_one_day_requests`): faltan las horas del 3 de marzo de 13:00 a 18:00 UTC y todo el 10 de marzo → dos intervalos → dos peticiones de un día (3 y 10 de marzo). Las horas del 3 de marzo que ya existían vuelven a llegar, pero la clave natural las detecta como duplicadas y no se tocan (sección 2.5).
+
+**Cuidado.** La primera petición de una carga inicial empieza a las 00:00 UTC del primer día, cinco horas antes de la ventana (que empieza a las 05:00 UTC). `update.execute_plan` descarta esas horas antes de importar:
+
+<!-- fragmento: python/src/clima_medellin/update.py -->
+```python
+        normalized = normalize(request.source, payload, end)
+        # La petición pide días UTC completos: el primero empieza antes de la ventana.
+        before = normalized.frame.index < pd.Timestamp(plan.window.start_utc)
+        frame = normalized.frame[~before]
+```
+
+### 5.5 Métricas por variable y estado
+
+**Concepto.** La cobertura se mide **por variable** (un registro puede tener la temperatura y no el viento): pasos válidos (con valor) sobre esperados, más el **hueco máximo** (tramo consecutivo de faltantes más largo) y el número de huecos. El estado combina dos criterios (D-014): porcentaje ≥ 98 % **y** hueco máximo ≤ 6 h.
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/coverage.py -->
+```python
+    valid_in_window = expected.intersection(valid)
+    gaps = group_intervals(missing_steps(expected, valid_in_window))
+    longest = max((int((last - first) / STEP) + 1 for first, last in gaps), default=0)
+    percent = 100.0 * len(valid_in_window) / len(expected) if len(expected) else 0.0
+```
+
+<!-- fragmento: python/src/clima_medellin/coverage.py -->
+```python
+    if records_in_window == 0:
+        return "SIN_DATOS"
+    if all(v.percent >= MIN_COVERAGE_PCT and v.max_gap_hours <= MAX_GAP_HOURS for v in variables):
+        return "COMPLETA"
+    return "PARCIAL"
+```
+
+- `expected.intersection(valid)` cuenta solo los valores dentro de la ventana; lo que haya fuera no suma.
+- Los huecos se calculan con la misma función de agrupación de 5.4; la duración de un hueco es `(última − primera) / 1 h + 1` horas.
+- `all(...)` exige que **todas** las variables de la fuente cumplan los dos umbrales.
+
+| Caso (ventana de 8 760 h) | Cobertura | Hueco máximo | Estado |
+|---|---|---|---|
+| Faltan 6 horas seguidas | 99,93 % | 6 h | COMPLETA |
+| Faltan 7 horas seguidas | 99,92 % | 7 h | PARCIAL |
+| Falta 1 hora de cada 34 | ≈ 97 % | 1 h | PARCIAL |
+| Ningún registro en la ventana | 0 % | — | SIN_DATOS |
+
+Con la API falsa de las pruebas (valores de las muestras) y D = 2026-10-18, una carga inicial deja ERA5 con 8 659 horas esperadas y válidas y CAMS con 8 760: las dos fuentes quedan `COMPLETA`, y una segunda actualización inmediata no planifica ninguna petición.
+
+**Cuidado.** Un 99 % con un único hueco de 80 horas pasaría por porcentaje, pero dejaría más de 3 días sin datos: por eso el estado exige también el hueco máximo.
+
+### 5.6 El flujo de actualización
+
+**Concepto.** `update.py` encadena las piezas: **cobertura → plan → descarga → normalización → recorte → importación → nueva cobertura**. El plan y la ejecución están separados para que la CLI pueda mostrar el plan y pedir confirmación antes de descargar.
+
+**Sintaxis básica.**
+
+```python
+from clima_medellin.bridge import JavaBridge
+from clima_medellin.coverage import today_local
+from clima_medellin.update import execute_plan, plan_update
+
+bridge = JavaBridge()
+plan = plan_update(bridge, today_local())          # [PlannedRequest("ERA5", 2026-03-10, 2026-03-10), ...]
+resultados = execute_plan(bridge, plan)            # descarga e importa cada petición
+```
+
+- Si la API no devuelve ningún valor para una petición, se importa igualmente un lote vacío: queda un `IngestionBatch` con 0 recibidos y 0 insertados, que demuestra que el hueco es de la fuente y no un fallo del proceso (prueba `test_empty_api_answer_still_records_a_batch`).
+- La función `fetch` se inyecta: en producción es `openmeteo.fetch`; en las pruebas, `FakeOpenMeteo` (`python/tests/fakes.py`).
