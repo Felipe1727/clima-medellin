@@ -232,7 +232,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
     - `cli-y-visualizaciones.md` updated; `implementacion.md`: figure anatomy, gaps, backends, PNG.
   - Depends on: regression
 
-- [ ] `cli-integration` — 7-option menu, end-to-end flow and final docs
+- [x] `cli-integration` — 7-option menu, end-to-end flow and final docs
   - Acceptance:
     - Menu per `cli-y-visualizaciones.md` with header (location, window), `[OK]`/`[…]`/`[AVISO]`/`[ERROR]`
       messages, non-COMPLETA warnings, empty-DB suggestion, download confirmation, option 3 paginated

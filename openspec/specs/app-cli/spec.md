@@ -5,13 +5,17 @@ Define el comando de terminal `clima-medellin` con el que el usuario arranca la 
 
 ## Requirements
 
-### Requirement: Comando instalado por el proyecto
-Al instalar el proyecto Python, SHALL quedar disponible el comando `clima-medellin`.
+### Requirement: Arranque de la aplicación
+Al instalar el proyecto Python, SHALL quedar disponible el comando `clima-medellin`. Sin opciones SHALL abrir el menú interactivo; con `--verbose` SHALL abrir el menú mostrando además los registros del JAR; con `--version` SHALL imprimir la versión.
 
 #### Scenario: Consulta de la versión
 - **WHEN** se ejecuta `clima-medellin --version` tras `uv sync`
 - **THEN** se imprime `clima-medellin <versión>` y el código de salida es 0
 
-#### Scenario: Ejecución sin opciones antes de implementar el menú
-- **WHEN** se ejecuta `clima-medellin` sin opciones
-- **THEN** se imprime un mensaje en español que indica que el menú aún no está disponible y el código de salida es 0
+#### Scenario: Ejecución sin opciones
+- **WHEN** se ejecuta `clima-medellin` sin opciones y el usuario elige la opción 7
+- **THEN** se muestra el menú, después un mensaje de despedida, y el código de salida es 0
+
+#### Scenario: Modo detallado
+- **WHEN** se ejecuta `clima-medellin --verbose`
+- **THEN** el menú usa el puente con el modo detallado activado
