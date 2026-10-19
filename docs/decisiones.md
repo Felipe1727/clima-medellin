@@ -37,6 +37,7 @@ Este documento reúne las decisiones de diseño del proyecto en un formato liger
 | [D-021](#d-021--las-franjas-se-calculan-y-no-se-persisten) | Las franjas se calculan y no se persisten | Definitiva | — |
 | [D-022](#d-022--unidades-canónicas) | Unidades canónicas (°C, %, m/s, µg/m³) | Definitiva | — |
 | [D-023](#d-023--visualizaciones-con-matplotlib-en-ventana-o-png) | Matplotlib, con salida en ventana o PNG | Definitiva | — |
+| [D-024](#d-024--modelos-de-calendario-para-temperatura-humedad-y-pm25) | Modelos de calendario para temperatura, humedad y PM2.5 | Definitiva | — |
 
 Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-023 se añaden aquí porque se derivan de ellas y conviene dejarlas por escrito. Las decisiones que estaban abiertas se cerraron en la sesión de exploración del 2026-10-18, con los resultados de la Fase 1; el resultado completo está en [openspec/roadmap.md](../openspec/roadmap.md).
 
@@ -226,6 +227,14 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 ## D-023 — Visualizaciones con Matplotlib, en ventana o PNG
 
 - **Decisión:** generar las gráficas con Matplotlib. La aplicación pregunta cada vez si mostrarlas en una ventana o guardarlas como PNG (`outputs/<gráfica>_<AAAAmmdd-HHMMSS>.png`); si no hay pantalla disponible, guarda el PNG automáticamente y lo avisa (DP-10). Cada gráfica lleva título, unidades, periodo y «Datos: Open-Meteo.com (ERA5, CAMS)». Implementado en la Fase 8 (`plots.py`), con 9 gráficas: las 8 previstas y el diagnóstico de empalmes. Ver [cli-y-visualizaciones.md](cli-y-visualizaciones.md).
+- **Estado:** definitiva.
+
+## D-024 — Modelos de calendario para temperatura, humedad y PM2.5
+
+- **Contexto:** se quiere predecir la temperatura, la humedad y el PM2.5 para una hora, un día o un rango de fechas. La regresión de D-017 no sirve: necesita la meteorología de esa hora (exploración del 2026-10-19).
+- **Opciones consideradas:** (a) regresión lineal con rasgos de calendario; (b) el perfil diurno como tabla de consulta; (c) pronósticos de Open-Meteo como entrada de la regresión de PM2.5; (d) más años de datos (5 años).
+- **Decisión:** (a). Un modelo por variable, con 23 indicadores de hora local y la onda estacional seno/coseno, sin escalador. Se evalúa con la separación de D-018 frente a la media de entrenamiento y se reajusta con toda la ventana para predecir; su MAE de prueba es el «error típico». Los modelos se reentrenan en cada uso y no se guardan.
+- **Consecuencias y limitaciones:** (a) superó a (b) en las tres variables; (c) contradice el alcance (sin pronósticos externos); (d) empeoró los resultados en una prueba sobre 11 trimestres (cambios de régimen entre años), así que la ventana sigue siendo de un año (D-016). Predice valores típicos, no el tiempo de un día concreto. Ver [regresion.md](regresion.md#modelos-de-calendario).
 - **Estado:** definitiva.
 
 ## Limitaciones y supuestos

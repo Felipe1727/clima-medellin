@@ -206,6 +206,68 @@ Formulación recomendada para la defensa: «En los datos modelados de ERA5 y CAM
 3. El modelo obtiene un R² de 0,35 en prueba y la línea base un MAE de 6 µg/m³ frente a 5,2 del modelo. ¿Cómo describirías el resultado y qué dirías del valor práctico del modelo? *(Valores ficticios.)*
 4. La temperatura tiene un VIF de 9 y su coeficiente es positivo, contra lo esperado. ¿Qué podría estar pasando y por qué no se debe concluir que el calor aumenta el PM2.5?
 
+## Modelos de calendario
+
+Además de la regresión de PM2.5 a partir del clima, el proyecto tiene tres **modelos de calendario** (D-024), uno para la temperatura, otro para la humedad relativa y otro para el PM2.5. Responden otra pregunta: **¿cuál es el valor típico de esta variable a esta hora del día, en esta época del año?** Solo usan la fecha y la hora, así que pueden dar una respuesta para cualquier hora pasada o futura; a cambio, nunca saben si un día concreto fue lluvioso o más caluroso de lo normal.
+
+### Rasgos
+
+Cada instante se convierte, en hora de Medellín, en:
+
+- **23 indicadores de hora** (`h01`…`h23`): valen 1 en su hora y 0 en las demás; a las 00:00 todos valen 0, así que la medianoche es la referencia. Se usan indicadores y no el número de la hora porque las horas no son cantidades (las 15:00 no son «15 veces» la 01:00) y porque así el modelo puede aprender cualquier forma del ciclo diario, incluidos los saltos de los empalmes de CAMS.
+- **La onda estacional**: seno y coseno de 2π·día_del_año/365,25. El año es un círculo (el 31 de diciembre está junto al 1 de enero); el par seno/coseno describe una onda anual cuyo máximo puede caer en cualquier fecha.
+
+El modelo es una regresión lineal **sin escalador**: los rasgos ya están en escalas comparables (0/1 y −1…1) y así cada coeficiente se lee directamente en unidades (°C, %, µg/m³). La regresión PM2.5 ← clima sigue usando su escalador (D-019).
+
+### La receta con los coeficientes reales
+
+Modelos ajustados con las muestras y la ventana de D = 2026-10-18 (reajustados con toda la ventana):
+
+```text
+ valor = intercepto + efecto de la hora + a·sen(estación) + b·cos(estación)
+```
+
+| Hora local | Temperatura (°C) | Humedad (%) | PM2.5 (µg/m³) |
+|---|---|---|---|
+| Intercepto (medianoche, estación media) | 21,0 | 87,8 | 18,5 |
+| 03:00 | −1,8 | +4,1 | −2,3 |
+| 06:00 | −2,6 | +5,6 | −2,6 |
+| 07:00 | −2,5 | +4,9 | −6,3 |
+| 09:00 | −1,1 | −2,4 | −10,2 |
+| 12:00 | +0,8 | −11,6 | −12,0 |
+| 15:00 | +2,4 | −13,3 | −11,8 |
+| 17:00 | +3,2 | −11,2 | −10,2 |
+| 19:00 | +2,9 | −10,7 | −0,6 |
+| 21:00 | +1,9 | −8,0 | +1,3 |
+| a (seno) / b (coseno) | −0,30 / −0,94 | +2,16 / +4,97 | +2,76 / +2,74 |
+
+Lectura: la temperatura es más baja hacia las 6 h y más alta hacia las 17 h (unos 6 °C de diferencia), con una onda estacional de ±1 °C cuyo máximo cae hacia mediados de julio. La humedad hace lo contrario. El PM2.5 cae de golpe entre las 6 y las 7 h y sube de golpe entre las 18 y las 19 h: son los empalmes del pronóstico de CAMS ([fuentes-y-datos.md](fuentes-y-datos.md#empalmes-de-las-ejecuciones-del-pronóstico-00-y-12-utc)), que el modelo reproduce porque tiene un coeficiente libre por hora.
+
+Ejemplo: 15 de marzo de 2026 a las 15:00 → 21,0 + 2,4 − 0,56 (estación de marzo) ≈ **22,8 °C** (el dato guardado es 23,9 °C).
+
+### Evaluación con las muestras
+
+Misma separación temporal que la regresión (entrenamiento 2025-10-18 → 2026-07-18, prueba 2026-07-19 → fin), frente a la línea base (media del entrenamiento):
+
+| Modelo | MAE modelo | MAE línea base | R² modelo | R² línea base |
+|---|---|---|---|---|
+| Temperatura | **1,03 °C** | 2,22 | 0,73 | −0,15 |
+| Humedad | **6,66 %** | 10,54 | 0,41 | −0,30 |
+| PM2.5 | **4,00 µg/m³** | 6,08 | 0,15 | −0,64 |
+
+El MAE de prueba es el **error típico** que la CLI muestra junto a cada predicción. Los tres modelos superan claramente a su línea base. Llama la atención que el modelo de calendario de PM2.5 (MAE 4,0) predice mejor que la regresión con el clima (MAE 5,7, [Resultado con las muestras](#resultado-con-las-muestras)): en estos datos, el PM2.5 depende más de la hora (ciclo diario y empalmes) que de la temperatura, la humedad y el viento.
+
+### Por qué un año de entrenamiento
+
+En la exploración del 2026-10-19 se comparó, en 11 trimestres de 2024 a 2026, entrenar con los últimos 9 meses, los últimos 12 meses o toda la historia disponible (4–5 años): el MAE medio fue 1,27 / 1,32 / 1,53 °C en temperatura, 8,5 / 6,1 / 6,7 % en humedad y 4,9 / 4,7 / 4,8 µg/m³ en PM2.5. Más historia **empeora** porque el régimen cambia de un año a otro (por ejemplo, el rango diario de temperatura de ERA5 pasó de 11–12 °C a mediados de 2023–2024 a 5–7 °C en 2025–2026), y CAMS no tiene PM2.5 antes de agosto de 2022. Por eso se mantiene la ventana de un año (D-016): la evaluación usa 9 meses (algo pesimista para la humedad, que no ve un año completo) y la predicción se hace con el modelo reajustado con los 12 meses.
+
+### Límites
+
+- Predice el **valor típico**, no el tiempo de un día concreto: no es un pronóstico meteorológico.
+- No detecta tendencias de largo plazo: el 15 de marzo a las 15:00 recibe la misma predicción cualquier año.
+- Solo se aceptan peticiones desde el inicio de la ventana hasta un año después de hoy, y de 31 días como máximo.
+- Las mismas limitaciones de interpretación de la regresión (modelos, escala de la celda, empalmes) se aplican aquí.
+
 ## Limitaciones y supuestos
 
 - Los ejemplos numéricos de las secciones teóricas son ficticios; los resultados reales con las muestras están en [Resultado con las muestras](#resultado-con-las-muestras).

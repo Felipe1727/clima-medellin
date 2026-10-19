@@ -2,7 +2,7 @@
 
 Este documento explica **cómo está construido el código**: las llamadas a ObjectDB, la inserción y la consulta de datos, los *joins*, el envío de datos de ObjectDB a Python, el análisis y las gráficas. Complementa a [arquitectura.md](arquitectura.md), que explica el **qué** y el **porqué**; aquí se explica el **cómo**, con ejemplos.
 
-El documento se escribió a medida que se construía cada parte (una sección por especificación del proyecto) y está completo: cubre las nueve fases de implementación.
+El documento se escribe a medida que se construye cada parte (una sección por especificación del proyecto).
 
 ## Cómo leer este documento
 
@@ -57,6 +57,9 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [7. Unión de datos, split temporal y regresión](#7-unión-de-datos-split-temporal-y-regresión) | Disponible | `regression` |
 | [8. Gráficas con Matplotlib](#8-gráficas-con-matplotlib) | Disponible | `visualizations` |
 | [9. Menú de la CLI](#9-menú-de-la-cli) | Disponible | `cli-integration` |
+| [10. Modelos de calendario: one-hot y rasgos cíclicos](#10-modelos-de-calendario-one-hot-y-rasgos-cíclicos) | Disponible | `calendar-models` |
+| 11. Interfaz de terminal con rich | Pendiente | `cli-ux` |
+| 12. Pantalla de predicción | Pendiente | `prediction-menu` |
 
 ---
 
@@ -1485,3 +1488,101 @@ Menu(bridge, input_fn=lambda prompt: next(respuestas), print_fn=salida.append).r
 El mismo flujo se ejecutó también con la API real el 2026-10-18: la carga inicial descargó 8 659 horas de ERA5 y 8 760 de PM2.5, las dos fuentes quedaron `COMPLETA` y la regresión dio los mismos números que con las muestras ([regresion.md](regresion.md#resultado-con-las-muestras)).
 
 **Cuidado.** Llamar a `input()` o a `date.today()` directamente dentro de las funciones haría el menú imposible de probar de forma automática y repetible.
+
+---
+
+## 10. Modelos de calendario: one-hot y rasgos cíclicos
+
+El código está en `python/src/clima_medellin/calendar_models.py` y las pruebas en `test_calendar_models.py`. La explicación estadística y los resultados están en [regresion.md](regresion.md#modelos-de-calendario).
+
+### 10.1 Codificación one-hot de la hora
+
+**Concepto.** Una regresión lineal multiplica cada rasgo por un coeficiente. Si el rasgo fuera «hora = 15», el modelo solo podría aprender una recta («cada hora suma lo mismo»), y el ciclo diario no es una recta. La **codificación one-hot** convierte una categoría en varias columnas 0/1, una por valor: así cada hora tiene su propio coeficiente. Una de las categorías (las 00:00) queda sin columna y hace de referencia; si tuviera columna, las 24 columnas sumarían siempre 1 y repetirían la información del intercepto.
+
+**Sintaxis básica.**
+
+```python
+horas = np.array([0, 15, 23])
+h15 = (horas == 15).astype(float)    # [0., 1., 0.]
+pd.get_dummies(pd.Series(horas), prefix="h", drop_first=True)   # versión de Pandas
+```
+
+### 10.2 Rasgos cíclicos: seno y coseno
+
+**Concepto.** El día del año va de 1 a 365, pero el 31 de diciembre está **junto** al 1 de enero. Con seno y coseno del ángulo 2π·día/365,25 cada día es un punto de un círculo, y días vecinos tienen valores parecidos. Con el par, la regresión puede colocar el máximo de la onda en cualquier fecha: el desfase lo deciden los dos coeficientes.
+
+**Sintaxis básica.**
+
+```python
+angulo = 2 * np.pi * dia_del_anio / 365.25
+estacion_sin, estacion_cos = np.sin(angulo), np.cos(angulo)
+# día 1 → (0,017, 1,000) · día 365 → (−0,004, 1,000): casi el mismo punto
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/calendar_models.py -->
+```python
+    local = index.tz_convert(LOCAL_TZ)
+    hours = local.hour.to_numpy()
+    # Una columna 0/1 por hora (codificación one-hot); las 00:00 quedan con todo a 0.
+    features = {name: (hours == h).astype(float) for h, name in enumerate(HOUR_COLUMNS, start=1)}
+    # El año es un círculo: seno y coseno sitúan cada día sobre él, así el 31 de
+    # diciembre queda junto al 1 de enero.
+    angle = 2 * np.pi * local.dayofyear.to_numpy() / DAYS_PER_YEAR
+    features["season_sin"] = np.sin(angle)
+    features["season_cos"] = np.cos(angle)
+```
+
+- `tz_convert(LOCAL_TZ)`: la hora del rasgo es la de Medellín (las 20:00 UTC son las 15:00 locales: prueba `test_utc_is_converted_to_local_hour`).
+- Las columnas son siempre las mismas 25 (`h01`…`h23`, `season_sin`, `season_cos`), aunque en los datos falte alguna hora; así el modelo de entrenamiento y el de predicción reciben la misma tabla.
+
+**Cuidado.** `pd.get_dummies` solo crea columnas para los valores presentes: si se usara sobre una sola hora a predecir, devolvería una tabla con una columna y el modelo fallaría. Por eso el proyecto construye las 23 columnas a mano.
+
+### 10.3 Evaluar y reajustar
+
+**Concepto.** Hay dos preguntas distintas: **¿qué tan bien predice?** (se responde con una separación honesta: ajustar con el entrenamiento y medir en la prueba) y **¿cuál es la mejor predicción posible?** (se responde con todos los datos). Por eso cada modelo se ajusta dos veces.
+
+<!-- fragmento: python/src/clima_medellin/calendar_models.py -->
+```python
+    # 1. Evaluación: se ajusta solo con el entrenamiento y se mide en la prueba.
+    evaluation = LinearRegression().fit(calendar_features(train.index), train)
+    predicted = evaluation.predict(calendar_features(test.index))
+    baseline = np.full(len(test), train.mean())
+    metrics = pd.DataFrame(
+        {"modelo": _metrics(test, predicted), "linea_base": _metrics(test, baseline)}
+    ).T
+
+    # 2. Reajuste con todas las horas de la ventana: es el modelo que predice.
+    final = LinearRegression().fit(calendar_features(series.index), series)
+    coefficients = pd.Series(final.coef_, index=FEATURES)
+    hour_effects = pd.Series([0.0] + [coefficients[c] for c in HOUR_COLUMNS], index=range(24))
+```
+
+- No hay `StandardScaler`: con rasgos 0/1 y −1…1, los coeficientes se leen directamente («a las 15:00 hace 2,4 °C más que a medianoche»).
+- `hour_effects` añade el 0 de la medianoche a los 23 coeficientes: es la tabla «efecto de cada hora» que se puede dibujar.
+- El MAE del modelo de evaluación es el **error típico** que acompaña a cada predicción.
+
+### 10.4 Peticiones: una hora, un día o un rango
+
+**Concepto.** El usuario escribe fechas en hora local con distintos grados de detalle; el código las convierte en la lista exacta de horas a predecir y rechaza, con un mensaje claro, lo que se sale de los límites (inicio de la ventana … hoy + 365 días, 31 días como máximo).
+
+<!-- fragmento: python/src/clima_medellin/calendar_models.py -->
+```python
+    start, start_has_hour = parse_moment(start_text)
+    if end_text.strip():
+        end, end_has_hour = parse_moment(end_text)
+        if not end_has_hour:
+            end = end.replace(hour=23)  # una fecha como «hasta» incluye todo ese día
+    else:
+        end = start if start_has_hour else start.replace(hour=23)
+```
+
+| Desde | Hasta | Horas |
+|---|---|---|
+| `2026-11-03 15:00` | (vacío) | 1 (las 15:00) |
+| `2026-11-03` | (vacío) | 24 (00:00 → 23:00) |
+| `2026-11-03` | `2026-11-05` | 72 (ambos días incluidos) |
+| `2026-11-03 06` | `2026-11-04 18:00` | 37 |
+
+`predict` devuelve, por hora local y variable, la predicción y, si hay un dato guardado para esa hora, el valor real y la diferencia (real − predicción).

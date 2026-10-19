@@ -18,6 +18,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 7 | Regresión lineal y evaluación | [x] | 6 |
 | 8 | Visualizaciones | [x] | 6, 7 |
 | 9 | CLI integrada, pruebas finales y defensa | [x] | 1–8 |
+| 10 | Modelos de calendario y CLI mejorada | [~] | 9 |
 
 Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
@@ -296,6 +297,29 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Decisiones abiertas:** ninguna nueva; se cierran las restantes.
 
 **Estado:** [x] completada en lo que respecta a la implementación; el guion de la defensa oral queda a cargo del estudiante.
+
+---
+
+## Fase 10 — Modelos de calendario y CLI mejorada
+
+**Objetivo:** que la CLI sea atractiva y comprensible para personas sin formación técnica, y que permita predecir la temperatura, la humedad y el PM2.5 típicos para una hora, un día o un rango (segunda exploración, 2026-10-19).
+
+**Entregables:**
+- [x] Tres modelos de calendario evaluados frente a su línea base, con peticiones de predicción (`python/src/clima_medellin/calendar_models.py`, D-024; resultados en [regresion.md](regresion.md#modelos-de-calendario)).
+- [ ] Interfaz con colores, tablas y explicaciones en lenguaje sencillo (D-025).
+- [ ] Opción de predicción, pantalla de evaluación de los modelos y gráfica del efecto de cada hora.
+
+**Conceptos que se estudiarán:**
+- *Codificación one-hot*: representar categorías (las horas) como columnas 0/1.
+- *Rasgos cíclicos*: seno y coseno para que el año (o el día) sea un círculo.
+- *Evaluar y reajustar*: medir con una separación honesta y predecir con todos los datos.
+- *Error típico*: comunicar la incertidumbre de una predicción en las unidades de la variable.
+
+**Criterio de verificación:** cada modelo supera a su línea base en la prueba, una fecha sin hora produce sus 24 horas y las peticiones fuera de los límites se explican en español.
+
+**Dependencias:** Fase 9.
+
+**Estado:** [~] en curso.
 
 ---
 
