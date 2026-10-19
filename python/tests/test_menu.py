@@ -2,6 +2,7 @@
 
 import io
 import os
+import re
 import subprocess
 from datetime import date
 from pathlib import Path
@@ -84,8 +85,8 @@ def test_end_to_end_from_an_empty_database(tmp_path):
     assert "Medias por franja" in text and "mañana" in text
     assert "error típico (MAE)" in text and "línea base (predecir siempre la media)" in text
     assert "dependencia entre horas seguidas (Durbin-Watson)" in text
-    assert "[OK] 13 gráficas generadas." in text
-    assert len(list((tmp_path / "outputs").glob("*.png"))) == 13
+    assert "[OK] 14 gráficas generadas." in text
+    assert len(list((tmp_path / "outputs").glob("*.png"))) == 14
     assert text.count("Qué significa") == 7  # opciones 1 (×2), 2, 3, 4, 5 y 7
     assert "[ERROR]" not in text
     assert text.rstrip().endswith("Hasta pronto.")
@@ -108,10 +109,55 @@ def test_invalid_option_shows_an_error(tmp_path):
     assert session.text.count("1  Ver qué datos hay guardados") == 2
 
 
-def test_prediction_option_is_coming_soon(tmp_path):
-    session = Session("6", "0")
+def test_predictions_and_model_evaluation(tmp_path):
+    session = Session(
+        "2",
+        "s",
+        "6",
+        "2026-03-01",
+        "",  # día pasado: valores reales
+        "6",
+        "2027-01-15 15:00",
+        "",  # hora futura: valor típico
+        "6",
+        "2026-11-03",
+        "2026-11-05",
+        "n",
+        "2",  # rango de 3 días: resumen y PNG
+        "6",
+        "2026-13-01",
+        "",  # fecha imposible
+        "6",
+        "2026-11-01",
+        "2026-12-15",  # más de 31 días
+        "5",
+        "0",
+    )
     make_menu(tmp_path, session).run()
-    assert "estará disponible próximamente" in session.text
+    text = session.text
+
+    assert "Predicción por hora (con valores reales)" in text
+    assert "2026-03-01 23:00" in text and "diferencia" in text
+    assert "Predicción por hora (valores típicos)" in text
+    assert "2027-01-15 15:00" in text
+    assert "Resumen diario (3 días, valores típicos)" in text
+    assert "2026-11-05" in text
+    assert len(list((tmp_path / "outputs").glob("prediccion_*.png"))) == 1
+    assert "no es un día que exista" in text
+    assert "el máximo es 31 días" in text
+    assert text.count("Son valores TÍPICOS") == 3
+    assert "error típico ±" not in text and "±" in text
+    for row in (
+        "Temperatura a 2 m (calendario)",
+        "Humedad relativa a 2 m (calendario)",
+        "PM2.5 (calendario)",
+        "PM2.5 (a partir del clima)",
+    ):
+        assert row in text
+    # Las cabeceras y los paneles pueden partirse en varias líneas: se comparan sin bordes.
+    flat = " ".join(re.sub("[│┃]", " ", text).split())
+    assert "error típico de la" in flat and "línea base" in flat
+    assert "en estos datos el PM2.5 depende más de la hora que del clima" in flat
 
 
 def test_empty_database_suggests_option_2(tmp_path):

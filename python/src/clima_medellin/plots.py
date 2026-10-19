@@ -371,6 +371,50 @@ def residuals(result: RegressionResult) -> Figure:
     return _finish(fig, "Residuos del modelo", _test_period(result))
 
 
+# --- Gráficas de los modelos de calendario ------------------------------------------------
+
+
+def hour_effects(models: dict, start: datetime, end: datetime) -> Figure:
+    """Efecto de cada hora local frente a la medianoche en los modelos de calendario."""
+    fig, axes = _figure(1, len(models), size=(13, 4.5))
+    for ax, (variable, model) in zip(axes.flat, models.items(), strict=True):
+        effects = model.hour_effects
+        ax.bar(effects.index, effects.to_numpy(), color=SERIES_1, width=0.8)
+        ax.axhline(0, color=INK_SECONDARY, linewidth=1)
+        ax.set_xticks(range(0, 24, 3))
+        ax.set_xlabel("Hora local")
+        ax.set_ylabel(f"Diferencia con la medianoche ({UNITS[variable]})")
+        ax.set_title(NAMES[variable], loc="left", fontsize=10)
+    return _finish(fig, "Modelos de calendario: efecto de cada hora", period_text(start, end))
+
+
+def prediction_chart(table: pd.DataFrame, models: dict) -> Figure:
+    """Predicción horaria con una banda de ± error típico y los valores reales si existen."""
+    fig, axes = _figure(len(models), 1, size=(11, 2.8 * len(models)))
+    for ax, (variable, model) in zip(axes.flat, models.items(), strict=True):
+        predicted = table[(variable, "prediccion")]
+        error = model.typical_error
+        ax.fill_between(
+            table.index,
+            predicted - error,
+            predicted + error,
+            color=SERIES_1,
+            alpha=0.15,
+            linewidth=0,
+            label=f"± error típico ({error:.1f})",
+        )
+        ax.plot(table.index, predicted, color=SERIES_1, linewidth=2, label="valor típico")
+        real = table[(variable, "real")]
+        if real.notna().any():
+            ax.plot(table.index, real, color=SERIES_2, linewidth=1.5, label="real")
+        ax.set_ylabel(label(variable))
+        ax.legend(loc="upper right", frameon=False, ncol=3)
+    axes.flat[-1].set_xlabel("Fecha y hora (hora de Medellín)")
+    first, last = table.index[0], table.index[-1]
+    period = f"Periodo: {first:%Y-%m-%d %H:%M} → {last:%Y-%m-%d %H:%M} (hora de Medellín)"
+    return _finish(fig, "Predicción con los modelos de calendario", period)
+
+
 # --- Salida --------------------------------------------------------------------------------
 
 NON_INTERACTIVE = {"agg", "pdf", "svg", "ps", "cairo", "template", "pgf"}
