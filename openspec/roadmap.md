@@ -117,7 +117,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
     - Project commands written into local `.claude/CLAUDE.md`.
   - Depends on: none
 
-- [ ] `api-validation` — Committed API samples and documentation of all Phase 1 findings and decisions
+- [x] `api-validation` — Committed API samples and documentation of all Phase 1 findings and decisions
   - Acceptance:
     - `python/scripts/fetch_samples.py` downloads, with the locked params: ERA5 one year, ERA5 recent
       month (including trailing nulls), PM2.5 one year, PM2.5 last week; files committed in `samples/`
