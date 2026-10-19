@@ -306,7 +306,7 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Entregables:**
 - [x] Tres modelos de calendario evaluados frente a su línea base, con peticiones de predicción (`python/src/clima_medellin/calendar_models.py`, D-024; resultados en [regresion.md](regresion.md#modelos-de-calendario)).
-- [ ] Interfaz con colores, tablas y explicaciones en lenguaje sencillo (D-025).
+- [x] Interfaz con colores, tablas y explicaciones en lenguaje sencillo (D-025; `ui.py` y `menu.py`).
 - [ ] Opción de predicción, pantalla de evaluación de los modelos y gráfica del efecto de cada hora.
 
 **Conceptos que se estudiarán:**

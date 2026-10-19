@@ -4,33 +4,44 @@ Este documento describe la experiencia del usuario: el menú de la aplicación d
 
 ## Menú principal
 
+Desde la Fase 10 el menú está agrupado por lo que el usuario quiere hacer y usa colores, tablas y explicaciones en lenguaje sencillo (D-025). El estado de la base aparece en la cabecera con una palabra y un color (verde «al día», amarillo «incompleta», rojo «vacía»).
+
 ```text
-  CLIMA MEDELLÍN · Bases de Datos
-  Ubicación: MED-CENTRO · Ventana: 2025-10-09 → 2026-10-09 (America/Bogota)
+ +----------------------------------------------------------------------------+
+ | CLIMA MEDELLÍN · Bases de Datos                                            |
+ | Ubicación: Medellín – Centro (MED-CENTRO)                                  |
+ | Datos del último año: 2025-10-18 → 2026-10-18 (hora de Medellín)           |
+ | Base de datos: al día · las dos fuentes están completas                    |
+ +----------------------------------------------------------------------------+
+ DATOS
+   1  Ver qué datos hay guardados (cobertura)
+   2  Descargar los datos que faltan (actualizar)
+   3  Consultar registros por fecha
+ ANÁLISIS
+   4  Resumen estadístico (medias, rangos, franjas)
+   5  Evaluar los modelos (qué tan bien predicen)
+ PREDICCIONES
+   6  Predecir temperatura, humedad o PM2.5 para una fecha u hora
+   7  Generar gráficas
 
-  1) Verificar cobertura
-  2) Actualizar datos
-  3) Consultar registros
-  4) Estadísticas descriptivas
-  5) Entrenar y evaluar la regresión
-  6) Generar visualizaciones
-  7) Salir
+   0  Salir
 
-  Opción: _
+Elige una opción (0-7):
 ```
-*(Maqueta ficticia.)*
+*(Aspecto aproximado del menú, sin colores; rich dibuja el recuadro con esquinas redondeadas.)*
 
 ## Qué hace cada opción
 
 | # | Opción | Qué hace | Qué muestra en la terminal | Llama a Java |
 |---|---|---|---|---|
-| 1 | Verificar cobertura | Calcula la ventana y el fin efectivo de cada fuente, pide a Java lo que existe y calcula métricas y estado ([cobertura-y-franjas.md](cobertura-y-franjas.md#criterio-de-cobertura)) | Una tabla por fuente y variable: esperados, válidos, % de cobertura, hueco máximo y estado (COMPLETA, PARCIAL o SIN_DATOS); además, los intervalos faltantes más grandes | `coverage` |
-| 2 | Actualizar datos | Calcula los faltantes, muestra un resumen de lo que va a descargar y pide confirmación. Luego descarga, normaliza, escribe en `staging/` e importa | El plan de descarga (intervalos y llamadas estimadas), el progreso por intervalo, el resumen del lote (recibidos, insertados, duplicados, rechazados) y la cobertura resultante | `coverage`, `import` |
-| 3 | Consultar registros | Pide un rango de fechas locales y una fuente; exporta y muestra los registros | Una tabla paginada con la hora local y UTC, los valores (`—` para null) y el lote de origen; al final, el número de registros y de valores nulos | `export` |
-| 4 | Estadísticas descriptivas | Exporta la ventana y calcula por variable: n, nulos, media, mediana, desviación, mínimo, máximo y percentiles; también las medias por franja y el número de días válidos | Tablas por variable y por franja, con advertencias si la cobertura no es COMPLETA | `export` |
-| 5 | Entrenar y evaluar | Exporta, une las fuentes, aplica el split temporal con hueco, entrena el Pipeline y evalúa frente a la línea base ([regresion.md](regresion.md)) | Las fechas de cada conjunto y su n, los coeficientes (estandarizados y en unidades originales), el VIF, la tabla de métricas del modelo frente a la línea base y un recordatorio de las limitaciones de interpretación | `export` |
-| 6 | Generar visualizaciones | Pregunta qué gráficas generar y si se muestran en ventana o se guardan como PNG | La lista de gráficas generadas y la ruta de cada PNG | `export` |
-| 7 | Salir | Termina la aplicación; opcionalmente limpia `staging/` y `exchange/` | Un mensaje de despedida | — |
+| 1 | Ver qué datos hay guardados | Calcula la ventana y el fin efectivo de cada fuente, pide a Java lo que existe y calcula métricas y estado ([cobertura-y-franjas.md](cobertura-y-franjas.md#criterio-de-cobertura)) | Una tabla por fuente y variable: horas esperadas, con dato, % de cobertura, hueco más largo y estado (COMPLETA, PARCIAL o SIN_DATOS, con su color y su palabra); además, los intervalos faltantes más grandes | `coverage` |
+| 2 | Descargar los datos que faltan | Calcula los faltantes, muestra el plan y pide confirmación. Luego descarga, normaliza, escribe en `staging/` e importa | El plan (tabla), las llamadas estimadas, el progreso por intervalo, el resumen de cada lote (recibidos, insertados, duplicados, rechazados) y la cobertura resultante | `coverage`, `import` |
+| 3 | Consultar registros por fecha | Pide la fuente y un rango de fechas locales (con ejemplo); exporta y muestra los registros | Una tabla paginada con la hora local y UTC, los valores (`—` para null) y el lote de origen; al final, el número de registros y de valores nulos | `export` |
+| 4 | Resumen estadístico | Exporta la ventana y calcula por variable: datos, sin valor, media, mediana, desviación típica, mínimo, máximo y percentiles; también las medias por franja y los días con dato | Tablas por variable y por franja, con advertencias si la cobertura no es COMPLETA | `export` |
+| 5 | Evaluar los modelos | Exporta, une las fuentes, aplica la separación temporal con hueco, entrena y evalúa frente a la línea base ([regresion.md](regresion.md)) | Las fechas de cada conjunto y su tamaño, la tabla «qué tan bien predice» (error típico, R²) del modelo frente a la línea base, los coeficientes con su VIF y el estadístico de Durbin-Watson explicado | `export` |
+| 6 | Predecir | Modelos de calendario ([regresion.md](regresion.md#modelos-de-calendario)) | Ver la especificación `prediction-menu` | `export` |
+| 7 | Generar gráficas | Pregunta si se muestran en ventana o se guardan como PNG y genera todas las gráficas con una barra de progreso | La ruta de cada PNG | `export`, `coverage` |
+| 0 | Salir | Termina la aplicación; no borra nada | Un mensaje de despedida | — |
 
 **Reglas comunes** (implementadas en la Fase 9; con cobertura no COMPLETA, el menú muestra un `[AVISO]` y pregunta `¿Continuar de todos modos? [s/N]`):
 
@@ -64,6 +75,8 @@ Cada gráfica lleva título, ejes con unidades, el periodo y una nota de fuente 
 La aplicación pregunta cada vez el modo (DP-10). Si no hay entorno gráfico disponible, guarda el PNG en lugar de fallar y lo avisa con la ruta. Detección (PV-18, resuelto en la Fase 8): no hay ventana si el backend de Matplotlib es de archivo (Agg, pdf, svg…) o si, en Linux, no están definidas ni `DISPLAY` (X11) ni `WAYLAND_DISPLAY` (Wayland).
 
 ## Experiencia de usuario en la terminal
+
+Cada pantalla de resultados termina con un panel **«Qué significa»** de dos o tres frases en lenguaje cotidiano (por ejemplo, en la opción 5: «el modelo se equivoca en promedio 5,7 µg/m³; predecir siempre la media se equivoca 6,1: mejora un 6 %»). Los términos técnicos aparecen con su traducción: «error típico (MAE)», «qué tanto explica el modelo (R²)», «redundancia con otras variables (VIF)», «dependencia entre horas seguidas (Durbin-Watson)». Cada pregunta muestra un ejemplo del formato esperado y una respuesta inválida explica qué se esperaba. Con `NO_COLOR` o con la salida redirigida a un archivo, se muestra lo mismo sin colores.
 
 ### Mensajes de estado
 

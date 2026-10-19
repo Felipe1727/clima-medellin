@@ -52,19 +52,29 @@ uv run clima-medellin --verbose  # igual, mostrando también los mensajes del JA
 ```
 
 ```text
-  CLIMA MEDELLÍN · Bases de Datos
-  Ubicación: MED-CENTRO · Ventana: 2025-10-18 → 2026-10-18 (America/Bogota)
+ +----------------------------------------------------------------------------+
+ | CLIMA MEDELLÍN · Bases de Datos                                            |
+ | Ubicación: Medellín – Centro (MED-CENTRO)                                  |
+ | Datos del último año: 2025-10-18 → 2026-10-18 (hora de Medellín)           |
+ | Base de datos: al día · las dos fuentes están completas                    |
+ +----------------------------------------------------------------------------+
+ DATOS
+   1  Ver qué datos hay guardados (cobertura)
+   2  Descargar los datos que faltan (actualizar)
+   3  Consultar registros por fecha
+ ANÁLISIS
+   4  Resumen estadístico (medias, rangos, franjas)
+   5  Evaluar los modelos (qué tan bien predicen)
+ PREDICCIONES
+   6  Predecir temperatura, humedad o PM2.5 para una fecha u hora
+   7  Generar gráficas
 
-  1) Verificar cobertura
-  2) Actualizar datos
-  3) Consultar registros
-  4) Estadísticas descriptivas
-  5) Entrenar y evaluar la regresión
-  6) Generar visualizaciones
-  7) Salir
+   0  Salir
+
+Elige una opción (0-7):
 ```
 
-Primer uso: elige **2) Actualizar datos** y confirma con `s`; la carga inicial de un año son dos peticiones a Open-Meteo (unos segundos). Después, las opciones 1 y 3 a 6 trabajan con los datos guardados en `data/clima.odb`, y las gráficas en PNG se guardan en `outputs/`. Cada opción está descrita en [docs/cli-y-visualizaciones.md](docs/cli-y-visualizaciones.md).
+Primer uso: elige **2 Descargar los datos que faltan** y confirma con `s`; la carga inicial de un año son dos peticiones a Open-Meteo (unos segundos). Después, las demás opciones trabajan con los datos guardados en `data/clima.odb`, y las gráficas en PNG se guardan en `outputs/`. Cada pantalla termina con un panel «Qué significa» que explica los resultados en lenguaje sencillo. Cada opción está descrita en [docs/cli-y-visualizaciones.md](docs/cli-y-visualizaciones.md).
 
 Solo puede haber una ejecución a la vez: ObjectDB no permite que dos procesos abran la misma base.
 
