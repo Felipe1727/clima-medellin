@@ -2,8 +2,8 @@
 
 ## 1. Funciones de cobertura
 
-- [ ] 1.1 Implementar en `clima_medellin/coverage.py` la ventana, el fin efectivo, los pasos esperados y faltantes, la agrupación en intervalos y la conversión a fechas con fusión, con pruebas de la tabla de ventanas (365/366/366/365 días), extremos UTC, fin efectivo, ejemplo de la documentación (dos peticiones de un día) y días contiguos; verificar con `uv run pytest`
-- [ ] 1.2 Implementar las métricas por variable y el estado (`COMPLETA`, `PARCIAL`, `SIN_DATOS`) con pruebas de hueco de 6 h (99,93 %, COMPLETA), hueco de 7 h (PARCIAL), 97 % en huecos cortos (PARCIAL) y sin registros (SIN_DATOS); verificar con `uv run pytest`
+- [x] 1.1 Implementar en `clima_medellin/coverage.py` la ventana, el fin efectivo, los pasos esperados y faltantes, la agrupación en intervalos y la conversión a fechas con fusión, con pruebas de la tabla de ventanas (365/366/366/365 días), extremos UTC, fin efectivo, ejemplo de la documentación (dos peticiones de un día) y días contiguos; verificar con `uv run pytest`
+- [x] 1.2 Implementar las métricas por variable y el estado (`COMPLETA`, `PARCIAL`, `SIN_DATOS`) con pruebas de hueco de 6 h (99,93 %, COMPLETA), hueco de 7 h (PARCIAL), 97 % en huecos cortos (PARCIAL) y sin registros (SIN_DATOS); verificar con `uv run pytest`
 
 ## 2. Actualización incremental
 
