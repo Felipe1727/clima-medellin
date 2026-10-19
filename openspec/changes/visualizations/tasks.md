@@ -2,9 +2,9 @@
 
 ## 1. Gráficas
 
-- [ ] 1.1 Implementar en `clima_medellin/plots.py` el estilo común, la anotación (`_finish`), la salida (`has_display`, `save_or_show`) y `conftest.py` con el backend Agg, con pruebas de PNG con el patrón de nombre, nombre no sobrescrito y aviso sin pantalla; verificar con `uv run pytest`
-- [ ] 1.2 Implementar las gráficas de datos (series temporales con huecos, perfil diurno con banda y franjas, cajas por franja, dispersión, correlación, mapa de cobertura, empalmes) con pruebas de anotación, hueco no unido y 24 barras con 00 y 12 destacadas; verificar con `uv run pytest`
-- [ ] 1.3 Implementar las gráficas de la regresión (real frente a predicho, residuos) con pruebas de anotación y de datos solo de prueba; generar todas las gráficas con las muestras y revisarlas visualmente; verificar con `uv run pytest`
+- [x] 1.1 Implementar en `clima_medellin/plots.py` el estilo común, la anotación (`_finish`), la salida (`has_display`, `save_or_show`) y `conftest.py` con el backend Agg, con pruebas de PNG con el patrón de nombre, nombre no sobrescrito y aviso sin pantalla; verificar con `uv run pytest`
+- [x] 1.2 Implementar las gráficas de datos (series temporales con huecos, perfil diurno con banda y franjas, cajas por franja, dispersión, correlación, mapa de cobertura, empalmes) con pruebas de anotación, hueco no unido y 24 barras con 00 y 12 destacadas; verificar con `uv run pytest`
+- [x] 1.3 Implementar las gráficas de la regresión (real frente a predicho, residuos) con pruebas de anotación y de datos solo de prueba; generar todas las gráficas con las muestras y revisarlas visualmente; verificar con `uv run pytest`
 
 ## 2. Documentación
 
