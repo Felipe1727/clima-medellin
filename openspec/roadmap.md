@@ -209,7 +209,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
       handling, percentiles.
   - Depends on: coverage
 
-- [ ] `regression` — Joined dataset, temporal split, Pipeline, baseline, metrics and diagnostics
+- [x] `regression` — Joined dataset, temporal split, Pipeline, baseline, metrics and diagnostics
   - Acceptance:
     - Inner join of PM2.5 and weather on timestamp, rows with any null dropped; split per the locked
       rule with exact dates reported.
