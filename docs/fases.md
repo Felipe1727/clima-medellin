@@ -15,7 +15,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 4 | Puente Java↔Python | [x] | 2, 3 |
 | 5 | Cobertura histórica e incrementos | [x] | 4 |
 | 6 | Franjas horarias y estadística descriptiva | [x] | 5 |
-| 7 | Regresión lineal y evaluación | [ ] | 6 |
+| 7 | Regresión lineal y evaluación | [x] | 6 |
 | 8 | Visualizaciones | [ ] | 6, 7 |
 | 9 | CLI integrada, pruebas finales y defensa | [ ] | 1–8 |
 
@@ -225,12 +225,12 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** entrenar y evaluar la regresión según [regresion.md](regresion.md), compararla con la línea base e interpretar los resultados con prudencia.
 
 **Entregables:**
-- [ ] Conjunto unido de PM2.5 y predictoras, con la resolución decidida (DP-02).
-- [ ] Split temporal con hueco de 24 h y las fechas exactas documentadas.
-- [ ] Pipeline (escalador + regresión) ajustado solo con el entrenamiento.
-- [ ] Tabla de métricas (MAE, RMSE, R²) del modelo y de la línea base.
-- [ ] Diagnósticos: VIF, autocorrelación de residuos y distribución de PM2.5 (DP-08).
-- [ ] Un párrafo de interpretación con la formulación prudente recomendada.
+- [x] Conjunto unido de PM2.5 y predictoras, con la resolución decidida (DP-02: todas las horas) (`regression.regression_dataset`).
+- [x] Split temporal con hueco de 24 h y las fechas exactas documentadas (`split.temporal_split`).
+- [x] Pipeline (escalador + regresión) ajustado solo con el entrenamiento (`regression.fit_and_evaluate`).
+- [x] Tabla de métricas (MAE, RMSE, R²) del modelo y de la línea base ([regresion.md](regresion.md#resultado-con-las-muestras)).
+- [x] Diagnósticos: VIF, autocorrelación de residuos (Durbin-Watson) y distribución de PM2.5 (DP-08: escala original).
+- [x] Un párrafo de interpretación con la formulación prudente recomendada, con los resultados de las muestras.
 
 **Conceptos que se estudiarán:**
 - *Mínimos cuadrados*: cómo se obtienen los coeficientes.
@@ -244,9 +244,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 6.
 
-**Decisiones abiertas:** DP-02, DP-08; las proporciones de D-018.
+**Decisiones abiertas:** DP-02 y DP-08 (resueltas); D-018 fijada por calendario.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 

@@ -186,7 +186,7 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Contexto:** el curso pide un análisis estadístico interpretable.
 - **Opciones consideradas:** regresión lineal; árboles o *boosting*; redes neuronales.
 - **Decisión:** regresión lineal múltiple con scikit-learn. Sin redes neuronales ni modelos complejos. Ver [regresion.md](regresion.md).
-- **Consecuencias y limitaciones:** el modelo es fácil de explicar, pero no captura relaciones no lineales ni la dinámica temporal.
+- **Consecuencias y limitaciones:** el modelo es fácil de explicar, pero no captura relaciones no lineales ni la dinámica temporal. Se usan todas las horas de PM2.5 (DP-02) en escala original (DP-08). Implementado en `regression.py` (Fase 7); con las muestras apenas mejora la línea base ([regresion.md](regresion.md#resultado-con-las-muestras)).
 - **Estado:** definitiva.
 
 ## D-018 — Split temporal 9 + 3 meses con hueco de 24 h
@@ -199,13 +199,13 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 ## D-019 — Pipeline con escalador ajustado solo con entrenamiento
 
 - **Decisión:** usar un Pipeline de scikit-learn (escalador + regresión) que se ajusta solo con el conjunto de entrenamiento.
-- **Consecuencias y limitaciones:** evita la fuga de información; los coeficientes quedan en unidades estandarizadas. Ver [regresion.md](regresion.md#pipeline-y-prevención-de-fuga-de-información).
+- **Consecuencias y limitaciones:** evita la fuga de información; los coeficientes quedan en unidades estandarizadas y se convierten también a unidades originales dividiendo entre la desviación de entrenamiento. Una prueba comprueba que el escalador aprende la media del entrenamiento y no la de todo el periodo. Ver [regresion.md](regresion.md#pipeline-y-prevención-de-fuga-de-información).
 - **Estado:** definitiva.
 
 ## D-020 — Línea base y métricas
 
 - **Decisión:** la línea base predice la media de PM2.5 en el entrenamiento. Las métricas son MAE, RMSE y R², calculadas sobre el conjunto de prueba para el modelo y la línea base.
-- **Consecuencias y limitaciones:** un modelo que no supera la línea base no aporta capacidad predictiva. Ver [regresion.md](regresion.md#línea-base).
+- **Consecuencias y limitaciones:** un modelo que no supera la línea base no aporta capacidad predictiva. Se completan con VIF (entrenamiento) y Durbin-Watson (residuos de prueba), sin p-valores por la autocorrelación. Ver [regresion.md](regresion.md#línea-base).
 - **Estado:** definitiva.
 
 ## D-021 — Las franjas se calculan y no se persisten
