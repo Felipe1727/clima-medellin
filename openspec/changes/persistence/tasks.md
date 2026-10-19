@@ -2,13 +2,13 @@
 
 ## 1. Entidades
 
-- [ ] 1.1 Crear `Source`, `BatchType`, `Location`, `WeatherRecord`, `AirQualityRecord` e `IngestionBatch` en `co.climamedellin.entities` (comentarios en español, `@Unique` compuesto, tipos envoltorio, `Instant`) y verificar que `mvn -q -DskipTests package` compila
+- [x] 1.1 Crear `Source`, `BatchType`, `Location`, `WeatherRecord`, `AirQualityRecord` e `IngestionBatch` en `co.climamedellin.entities` (comentarios en español, `@Unique` compuesto, tipos envoltorio, `Instant`) y verificar que `mvn -q -DskipTests package` compila
 
 ## 2. Servicio de persistencia
 
-- [ ] 2.1 Implementar `Database` y `RecordStore.ensureLocation`, con prueba JUnit de ubicación única por código, y verificar con `mvn -q verify`
-- [ ] 2.2 Implementar la inserción de lotes (precarga de claves, duplicados en el lote y entre lotes, rechazos, bloques de 500, reintento uno a uno, conteos en `IngestionBatch`) con pruebas de duplicados, rechazos, bloques de 1 200 registros y clave única en la base, y verificar con `mvn -q verify`
-- [ ] 2.3 Implementar las consultas por código y rango con `JOIN` y el resumen agregado, con pruebas de orden, rango, resumen, ida y vuelta de `null`, timestamp con otra zona horaria y reapertura, y verificar con `mvn -q verify`
+- [x] 2.1 Implementar `Database` y `RecordStore.ensureLocation`, con prueba JUnit de ubicación única por código, y verificar con `mvn -q verify`
+- [x] 2.2 Implementar la inserción de lotes (precarga de claves, duplicados en el lote y entre lotes, rechazos, bloques de 500, reintento uno a uno, conteos en `IngestionBatch`) con pruebas de duplicados, rechazos, bloques de 1 200 registros y clave única en la base, y verificar con `mvn -q verify`
+- [x] 2.3 Implementar las consultas por código y rango con `JOIN` y el resumen agregado, con pruebas de orden, rango, resumen, ida y vuelta de `null`, timestamp con otra zona horaria y reapertura, y verificar con `mvn -q verify`
 
 ## 3. Documentación
 
