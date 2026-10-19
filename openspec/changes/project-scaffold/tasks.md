@@ -22,7 +22,7 @@
 - [x] 4.1 Crear `.github/workflows/ci.yml` (checkout, Java 25 temurin con caché de Maven, setup-uv, Install, Test, Lint) y verificar la sintaxis ejecutando localmente los tres comandos del roadmap
 - [x] 4.2 Actualizar `README.md` (árbol de carpetas real y `implementacion.md` en la tabla de documentación) y revisar `.gitignore`; verificar con `git status` tras compilar y probar que no aparecen artefactos generados
 - [x] 4.3 Escribir los comandos del proyecto en el `.claude/CLAUDE.md` local y marcar el avance correspondiente en `docs/fases.md`; verificar que `git status` no muestra `.claude/CLAUDE.md`
-- [ ] 4.4 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
+- [x] 4.4 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up
 
