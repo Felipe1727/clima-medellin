@@ -58,7 +58,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [8. Gráficas con Matplotlib](#8-gráficas-con-matplotlib) | Disponible | `visualizations` |
 | [9. Menú de la CLI](#9-menú-de-la-cli) | Disponible | `cli-integration` |
 | [10. Modelos de calendario: one-hot y rasgos cíclicos](#10-modelos-de-calendario-one-hot-y-rasgos-cíclicos) | Disponible | `calendar-models` |
-| 11. Interfaz de terminal con rich | Pendiente | `cli-ux` |
+| [11. Interfaz de terminal con rich](#11-interfaz-de-terminal-con-rich) | Disponible | `cli-ux` |
 | 12. Pantalla de predicción | Pendiente | `prediction-menu` |
 
 ---
@@ -1402,21 +1402,22 @@ Con las muestras, el diagnóstico de empalmes muestra barras de 7,4 µg/m³ (00 
 
 ## 9. Menú de la CLI
 
-El menú está en `python/src/clima_medellin/menu.py` y el comando en `cli.py`. Las pruebas son `test_menu.py` (entradas programadas, JAR real, base temporal y la API falsa de las muestras) y `test_cli.py`.
+El menú está en `python/src/clima_medellin/menu.py`, su presentación en `ui.py` (sección 11) y el comando en `cli.py`. Las pruebas son `test_menu.py` (entradas programadas, JAR real, base temporal y la API falsa de las muestras) y `test_cli.py`.
 
 ### 9.1 El menú como capa fina
 
-**Concepto.** El menú no contiene reglas de negocio: **orquesta** funciones que ya existen (cobertura, actualización, análisis, regresión, gráficas) y **formatea** sus resultados. Así cada regla vive en un solo sitio, con sus propias pruebas, y el menú solo decide qué llamar y qué mostrar.
+**Concepto.** El menú no contiene reglas de negocio: **orquesta** funciones que ya existen (cobertura, actualización, análisis, regresión, gráficas) y **formatea** sus resultados. Así cada regla vive en un solo sitio, con sus propias pruebas, y el menú solo decide qué llamar y qué mostrar. Desde la Fase 10 las opciones están agrupadas por lo que el usuario quiere hacer (D-025).
 
-| Opción | Llama a | Muestra |
-|---|---|---|
-| 1 Verificar cobertura | `update.current_coverage` | Tabla por fuente y variable (esperados, válidos, %, hueco máximo, huecos, estado) y los 3 intervalos faltantes más largos |
-| 2 Actualizar datos | `update.plan_update`, `update.execute_plan` | Plan, llamadas estimadas, confirmación `[s/N]`, progreso `[…]` por intervalo, resumen `[OK]` de cada lote y cobertura resultante |
-| 3 Consultar registros | `JavaBridge.export` | Tabla paginada (20 filas) con hora local y UTC, valores (`—` si es nulo) y lote |
-| 4 Estadísticas descriptivas | `dataset.load_window`, `descriptive.*`, `bands.daily_bands` | Estadísticas por variable y medias por franja con días válidos |
-| 5 Regresión | `regression.regression_dataset`, `regression.fit_and_evaluate` | Fechas de la separación, métricas frente a la línea base, coeficientes, VIF y Durbin-Watson |
-| 6 Visualizaciones | `plots.*`, `plots.save_or_show` | 13 gráficas en ventana o PNG, con la ruta de cada PNG |
-| 7 Salir | — | «Hasta pronto.» |
+| Grupo | Opción | Llama a | Muestra |
+|---|---|---|---|
+| DATOS | 1 Ver qué datos hay guardados | `update.current_coverage` | Tabla por fuente y variable (horas esperadas, con dato, %, hueco más largo, huecos, estado) y los 3 intervalos faltantes más largos |
+| DATOS | 2 Descargar los datos que faltan | `update.plan_update`, `update.execute_plan` | Plan, llamadas estimadas, confirmación `[s/N]`, progreso por intervalo, resumen `[OK]` de cada lote y cobertura resultante |
+| DATOS | 3 Consultar registros por fecha | `JavaBridge.export` | Tabla paginada (20 filas) con hora local y UTC, valores (`—` si es nulo) y lote |
+| ANÁLISIS | 4 Resumen estadístico | `dataset.load_window`, `descriptive.*`, `bands.daily_bands` | Estadísticas por variable y medias por franja con días válidos |
+| ANÁLISIS | 5 Evaluar los modelos | `regression.regression_dataset`, `regression.fit_and_evaluate` | Fechas de la separación, métricas frente a la línea base, coeficientes, VIF y Durbin-Watson |
+| PREDICCIONES | 6 Predecir | `calendar_models.*` | Predicciones de los modelos de calendario (sección 12) |
+| PREDICCIONES | 7 Generar gráficas | `plots.*`, `plots.save_or_show` | Gráficas en ventana o PNG, con la ruta de cada PNG |
+| — | 0 Salir | — | «Hasta pronto.» |
 
 **En este proyecto.** El bucle principal:
 
@@ -1426,28 +1427,28 @@ El menú está en `python/src/clima_medellin/menu.py` y el comando en `cli.py`. 
         while True:
             self.header()
             try:
-                choice = self.input("  Opción: ").strip()
+                choice = self.input("Elige una opción (0-7): ").strip()
             except EOFError, KeyboardInterrupt:
-                choice = "7"
-            if choice == "7":
+                choice = "0"
+            if choice == "0":
                 self.print("Hasta pronto.")
                 return
             action = self.actions.get(choice)
             if action is None:
-                self.error(f"Opción no válida: {choice!r}. Elige un número del 1 al 7.")
+                self.print(ui.error(f"Opción no válida: {choice!r}. Escribe un número del 0 al 7."))
                 continue
             try:
                 action()
             except ERRORS as exc:
                 # Ningún error cierra la aplicación: se informa y se vuelve al menú.
-                self.error(str(exc))
+                self.print(ui.error(str(exc)))
 ```
 
 - `self.actions` es un diccionario `{"1": self.show_coverage, ...}`: elegir una opción es buscar su función en el diccionario.
-- `except EOFError, KeyboardInterrupt:` (sintaxis sin paréntesis admitida desde Python 3.14) hace que Ctrl+D o Ctrl+C salgan como la opción 7, sin traza.
+- `except EOFError, KeyboardInterrupt:` (sintaxis sin paréntesis admitida desde Python 3.14) hace que Ctrl+D o Ctrl+C salgan como la opción 0, sin traza.
 - `ERRORS` agrupa los errores esperables (`BridgeError`, `OpenMeteoError`, `NormalizationError`, `ValueError`): se muestran como `[ERROR]` con su mensaje en español y el menú sigue disponible. Por ejemplo, si la base está abierta por otra ejecución, el usuario ve «No se pudo usar la base de datos; cierra otras ejecuciones…» (sección 4.2).
 
-### 9.2 Reglas comunes de las opciones 3 a 6
+### 9.2 Reglas comunes de las opciones 3 a 7
 
 **Concepto.** Antes de consultar o analizar, el menú comprueba la cobertura: con la base vacía no hay nada que analizar, y con cobertura incompleta los resultados pueden estar sesgados. El usuario decide si seguir, pero siempre sabiéndolo.
 
@@ -1456,13 +1457,15 @@ El menú está en `python/src/clima_medellin/menu.py` y el comando en `cli.py`. 
         reports = current_coverage(self.bridge, self.today())
         states = {source: report.state for source, report in reports.items()}
         if all(state == "SIN_DATOS" for state in states.values()):
-            self.warn("La base está vacía. Ejecuta primero la opción 2 (Actualizar datos).")
+            self.print(ui.warn("La base está vacía. Ejecuta primero la opción 2 (Descargar)."))
             return False
         partial = [f"{s} {state}" for s, state in states.items() if state != "COMPLETA"]
         if partial:
-            self.warn(
-                f"Cobertura no COMPLETA ({', '.join(partial)}). Los resultados pueden estar "
-                "sesgados."
+            self.print(
+                ui.warn(
+                    f"Cobertura no COMPLETA ({', '.join(partial)}). Los resultados pueden "
+                    "estar sesgados."
+                )
             )
             return self.confirm("¿Continuar de todos modos?")
         return True
@@ -1473,17 +1476,18 @@ El menú está en `python/src/clima_medellin/menu.py` y el comando en `cli.py`. 
 
 ### 9.3 Dependencias inyectables y prueba de extremo a extremo
 
-**Concepto.** Para probar un programa interactivo sin escribir en el teclado, todo lo que toca el exterior se **inyecta** al construirlo: el puente con Java (y por tanto la base), la función de descarga, la fecha de hoy, la carpeta de salidas, y las funciones de entrada y salida. En producción son `input`, `print`, `openmeteo.fetch` y la fecha real; en las pruebas, respuestas programadas, una lista que captura lo impreso, la API falsa y una fecha fija.
+**Concepto.** Para probar un programa interactivo sin escribir en el teclado, todo lo que toca el exterior se **inyecta** al construirlo: el puente con Java (y por tanto la base), la función de descarga, la fecha de hoy, la carpeta de salidas, la consola de `rich` y la función de entrada. En producción son la consola real, `console.input`, `openmeteo.fetch` y la fecha real; en las pruebas, respuestas programadas, una consola que **graba** el texto sin colores, la API falsa y una fecha fija.
 
 **Sintaxis básica.**
 
 ```python
-respuestas = iter(["1", "7"])
-salida = []
-Menu(bridge, input_fn=lambda prompt: next(respuestas), print_fn=salida.append).run()
+consola = Console(file=io.StringIO(), width=140, color_system=None, record=True)
+respuestas = iter(["1", "0"])
+Menu(bridge, console=consola, input_fn=lambda prompt: next(respuestas)).run()
+texto = consola.export_text()        # todo lo que se mostró, como texto plano
 ```
 
-**En este proyecto.** `test_end_to_end_from_an_empty_database` recorre el flujo completo de la Fase 9 con una base temporal: cobertura (`SIN_DATOS`) → actualización confirmada (2 lotes) → cobertura (`COMPLETA`) → consulta de un día (24 registros en 2 páginas) → estadísticas → regresión → 13 gráficas PNG → salir, y comprueba que no aparece ningún `[ERROR]`. Otras pruebas cortas cubren la opción inválida, la base vacía, la actualización cancelada, la base al día, el aviso de cobertura parcial y el error del puente (JAR inexistente).
+**En este proyecto.** `test_end_to_end_from_an_empty_database` recorre el flujo completo con una base temporal: cobertura (`SIN_DATOS`) → descarga confirmada (2 lotes) → cobertura (`COMPLETA`) → consulta de un día (24 registros en 2 páginas) → resumen estadístico → evaluación del modelo → 13 gráficas PNG → salir, y comprueba que no aparece ningún `[ERROR]` y que cada pantalla de resultados termina con su panel «Qué significa». Otras pruebas cortas cubren el menú agrupado, la opción inválida, la base vacía, la descarga cancelada, la base al día, la fecha mal escrita, el aviso de cobertura parcial y el error del puente (JAR inexistente).
 
 El mismo flujo se ejecutó también con la API real el 2026-10-18: la carga inicial descargó 8 659 horas de ERA5 y 8 760 de PM2.5, las dos fuentes quedaron `COMPLETA` y la regresión dio los mismos números que con las muestras ([regresion.md](regresion.md#resultado-con-las-muestras)).
 
@@ -1586,3 +1590,69 @@ estacion_sin, estacion_cos = np.sin(angulo), np.cos(angulo)
 | `2026-11-03 06` | `2026-11-04 18:00` | 37 |
 
 `predict` devuelve, por hora local y variable, la predicción y, si hay un dato guardado para esa hora, el valor real y la diferencia (real − predicción).
+
+---
+
+## 11. Interfaz de terminal con rich
+
+La presentación está en `python/src/clima_medellin/ui.py`; el menú (sección 9) solo llama a sus funciones. Las decisiones de aspecto y lenguaje están en D-025.
+
+### 11.1 Consola, colores y texto plano
+
+**Concepto.** `rich` es una biblioteca de Python que dibuja en la terminal tablas, paneles, colores y barras de progreso. Todo se escribe a través de un objeto `Console`. La consola detecta si la salida es una terminal: si se redirige a un archivo (o en las pruebas) escribe el mismo contenido **sin códigos de color**, y si existe la variable de entorno `NO_COLOR` tampoco usa colores.
+
+**Sintaxis básica.**
+
+```python
+from rich.console import Console
+from rich.text import Text
+
+consola = Console()
+consola.print(Text("COMPLETA (completa)", style="green"))   # verde en una terminal
+consola.input("Elige una opción (0-7): ")                   # pregunta y lee la respuesta
+```
+
+**Cuidado.** El color **nunca** lleva la información solo (D-025): un estado se muestra como «COMPLETA (completa)» en verde, «PARCIAL (incompleta)» en amarillo o «SIN_DATOS (sin datos)» en rojo, y los mensajes llevan siempre su palabra (`[OK]`, `[AVISO]`, `[ERROR]`). Así se entienden en blanco y negro, con daltonismo o en un archivo de registro.
+
+### 11.2 Tablas desde un DataFrame, con los términos traducidos
+
+**Concepto.** Las tablas de `rich` se construyen columna a columna y fila a fila. `df_table` convierte cualquier DataFrame del análisis en una tabla y, de paso, traduce los nombres técnicos (`MAE` → «error típico (MAE)», `R2` → «qué tanto explica el modelo (R²)», `linea_base` → «línea base (predecir siempre la media)»), para que una persona sin formación técnica entienda cada columna sin perder el término que aparece en la documentación.
+
+<!-- fragmento: python/src/clima_medellin/ui.py -->
+```python
+    table = Table(title=title, box=box.SIMPLE_HEAVY, title_justify="left", header_style="bold cyan")
+    show_index = index_name != "" or not isinstance(frame.index, pd.RangeIndex)
+    if show_index:
+        table.add_column(index_name or "", style="bold")
+    for column in frame.columns:
+        name = " ".join(map(str, column)) if isinstance(column, tuple) else str(column)
+        table.add_column(TERMS.get(name, name), justify="right")
+    for label, row in frame.iterrows():
+        cells = [format_value(v, decimals) for v in row]
+        if show_index:
+            label = " · ".join(map(str, label)) if isinstance(label, tuple) else str(label)
+            cells = [TERMS.get(label, label)] + cells
+        table.add_row(*cells)
+    return table
+```
+
+- `TERMS.get(name, name)` usa la traducción si existe y, si no, deja el nombre tal cual.
+- Las cifras van alineadas a la derecha y con un número fijo de decimales; un valor ausente se muestra como «—».
+- Los índices con varios niveles (por ejemplo, variable y franja) se unen con « · ».
+
+### 11.3 El panel «Qué significa»
+
+**Concepto.** Cada pantalla de resultados termina con un panel de dos o tres frases en lenguaje cotidiano. Algunos son fijos (qué es la cobertura) y otros se construyen con los números de la pantalla (cuánto mejora el modelo frente a predecir siempre la media).
+
+<!-- fragmento: python/src/clima_medellin/ui.py -->
+```python
+    return Panel(
+        text, title="Qué significa", title_align="left", border_style="blue", padding=(0, 1)
+    )
+```
+
+### 11.4 Progreso y estado de la base
+
+- La descarga y la generación de gráficas usan `rich.progress.Progress`. La barra solo se dibuja en una terminal real (`disable=not console.is_terminal`); además se escribe una línea `[…] Descargando … (1/2)` por petición, que sí queda en las pruebas y en los registros.
+- La cabecera muestra el estado de la base («al día», «incompleta», «vacía») con su color y una sugerencia. Para no arrancar dos JVM cada vez que se muestra el menú, el estado se calcula una vez y se vuelve a calcular solo después de descargar datos.
+

@@ -38,6 +38,7 @@ Este documento reúne las decisiones de diseño del proyecto en un formato liger
 | [D-022](#d-022--unidades-canónicas) | Unidades canónicas (°C, %, m/s, µg/m³) | Definitiva | — |
 | [D-023](#d-023--visualizaciones-con-matplotlib-en-ventana-o-png) | Matplotlib, con salida en ventana o PNG | Definitiva | — |
 | [D-024](#d-024--modelos-de-calendario-para-temperatura-humedad-y-pm25) | Modelos de calendario para temperatura, humedad y PM2.5 | Definitiva | — |
+| [D-025](#d-025--cli-con-rich-y-en-lenguaje-sencillo) | CLI con rich y en lenguaje sencillo | Definitiva | — |
 
 Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-023 se añaden aquí porque se derivan de ellas y conviene dejarlas por escrito. Las decisiones que estaban abiertas se cerraron en la sesión de exploración del 2026-10-18, con los resultados de la Fase 1; el resultado completo está en [openspec/roadmap.md](../openspec/roadmap.md).
 
@@ -235,6 +236,14 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Opciones consideradas:** (a) regresión lineal con rasgos de calendario; (b) el perfil diurno como tabla de consulta; (c) pronósticos de Open-Meteo como entrada de la regresión de PM2.5; (d) más años de datos (5 años).
 - **Decisión:** (a). Un modelo por variable, con 23 indicadores de hora local y la onda estacional seno/coseno, sin escalador. Se evalúa con la separación de D-018 frente a la media de entrenamiento y se reajusta con toda la ventana para predecir; su MAE de prueba es el «error típico». Los modelos se reentrenan en cada uso y no se guardan.
 - **Consecuencias y limitaciones:** (a) superó a (b) en las tres variables; (c) contradice el alcance (sin pronósticos externos); (d) empeoró los resultados en una prueba sobre 11 trimestres (cambios de régimen entre años), así que la ventana sigue siendo de un año (D-016). Predice valores típicos, no el tiempo de un día concreto. Ver [regresion.md](regresion.md#modelos-de-calendario).
+- **Estado:** definitiva.
+
+## D-025 — CLI con rich y en lenguaje sencillo
+
+- **Contexto:** la CLI de la Fase 9 era texto plano y usaba términos técnicos sin explicarlos; se quiere que la entienda una persona sin formación técnica (exploración del 2026-10-19).
+- **Opciones consideradas:** (a) la biblioteca `rich` (tablas, paneles, colores, barras de progreso); (b) códigos ANSI escritos a mano; (c) una interfaz de pantalla completa (Textual).
+- **Decisión:** (a). Menú agrupado (DATOS / ANÁLISIS / PREDICCIONES, 0 = Salir); cabecera con el estado de la base en color y con palabra; tablas de `rich` con los términos traducidos («error típico (MAE)»…); un panel «Qué significa» al final de cada pantalla de resultados; ejemplos en cada pregunta y errores de formato explicados; barras de progreso en la descarga y las gráficas.
+- **Consecuencias y limitaciones:** el color nunca lleva la información solo (siempre acompaña a una palabra); con `NO_COLOR` o con la salida redirigida se muestra lo mismo sin colores, y las pruebas leen ese texto con una consola de grabación. (b) habría obligado a gestionar a mano anchos y compatibilidad; (c) es excesivo para un menú de opciones. Ver [cli-y-visualizaciones.md](cli-y-visualizaciones.md#menú-principal).
 - **Estado:** definitiva.
 
 ## Limitaciones y supuestos
