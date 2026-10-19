@@ -2,12 +2,12 @@
 
 ## 1. Configuración y cliente HTTP
 
-- [ ] 1.1 Crear `clima_medellin/config.py` (ubicación, zona horaria, configuración por fuente con variables, columnas, unidades y rangos) y hacer que `scripts/fetch_samples.py` la importe; verificar con `uv run ruff check .` y `uv run pytest` (pruebas de muestras)
-- [ ] 1.2 Implementar `clima_medellin/openmeteo.py` (`build_request`, `fetch` con 3 reintentos y esperas crecientes, `OpenMeteoError`) con pruebas de parámetros por fuente, reintento tras 503, reintentos agotados por timeout y 4xx sin reintento usando una sesión falsa; verificar con `uv run pytest`
+- [x] 1.1 Crear `clima_medellin/config.py` (ubicación, zona horaria, configuración por fuente con variables, columnas, unidades y rangos) y hacer que `scripts/fetch_samples.py` la importe; verificar con `uv run ruff check .` y `uv run pytest` (pruebas de muestras)
+- [x] 1.2 Implementar `clima_medellin/openmeteo.py` (`build_request`, `fetch` con 3 reintentos y esperas crecientes, `OpenMeteoError`) con pruebas de parámetros por fuente, reintento tras 503, reintentos agotados por timeout y 4xx sin reintento usando una sesión falsa; verificar con `uv run pytest`
 
 ## 2. Normalización
 
-- [ ] 2.1 Implementar `clima_medellin/normalize.py` (unidades, índice UTC, columnas canónicas, rangos, duplicados, fin efectivo, filas vacías, informe) con pruebas sobre las muestras: 8 664 filas de ERA5, 8 760 de PM2.5, sin duplicados, nulos parciales conservados, valor de 80 °C detectado, nulos finales eliminados, fila vacía intermedia descartada, timestamp repetido, unidad inesperada y America/Bogota = UTC−5 todo el año (PV-16); verificar con `uv run pytest`
+- [x] 2.1 Implementar `clima_medellin/normalize.py` (unidades, índice UTC, columnas canónicas, rangos, duplicados, fin efectivo, filas vacías, informe) con pruebas sobre las muestras: 8 664 filas de ERA5, 8 760 de PM2.5, sin duplicados, nulos parciales conservados, valor de 80 °C detectado, nulos finales eliminados, fila vacía intermedia descartada, timestamp repetido, unidad inesperada y America/Bogota = UTC−5 todo el año (PV-16); verificar con `uv run pytest`
 
 ## 3. Documentación
 
