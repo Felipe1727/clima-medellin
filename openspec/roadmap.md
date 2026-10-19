@@ -147,7 +147,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
       persist, JPQL select, JOIN, aggregations, nulls).
   - Depends on: project-scaffold
 
-- [ ] `ingest` — Open-Meteo client and normalization to validated DataFrames
+- [x] `ingest` — Open-Meteo client and normalization to validated DataFrames
   - Acceptance:
     - Client builds requests with the locked params; retries 3 times with backoff on timeouts/5xx
       (tested with mocks).
