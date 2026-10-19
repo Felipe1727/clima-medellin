@@ -161,7 +161,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
     - `implementacion.md`: HTTP request, JSON -> DataFrame, UTC handling, validation.
   - Depends on: api-validation
 
-- [ ] `bridge` — JAR subcommands coverage/import/export and the Python bridge module
+- [x] `bridge` — JAR subcommands coverage/import/export and the Python bridge module
   - Acceptance:
     - Subcommands with documented arguments (`--db`, plus location, source, range, file/out as needed);
       `import` creates the Location if absent from the metadata passed by Python and records an
