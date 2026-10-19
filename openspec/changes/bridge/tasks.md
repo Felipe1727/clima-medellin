@@ -8,8 +8,8 @@
 
 ## 2. Puente en Python
 
-- [ ] 2.1 Implementar `paths.py` y `jsonlines.py` (DataFrame ↔ JSON Lines) con pruebas de NaN → `null`, sufijo `Z` y lectura con índice UTC; verificar con `uv run pytest`
-- [ ] 2.2 Implementar `bridge.py` (`JavaBridge`, `BridgeError`, mensajes en español, staging y exchange, modo detallado) con pruebas contra el JAR real: ida y vuelta idéntica, repetición con 0 insertados, línea corrupta con mensaje y staging conservado, subcomando desconocido con código 1, cobertura y stderr en modo detallado; verificar con `uv run pytest`
+- [x] 2.1 Implementar `paths.py` y `jsonlines.py` (DataFrame ↔ JSON Lines) con pruebas de NaN → `null`, sufijo `Z` y lectura con índice UTC; verificar con `uv run pytest`
+- [x] 2.2 Implementar `bridge.py` (`JavaBridge`, `BridgeError`, mensajes en español, staging y exchange, modo detallado) con pruebas contra el JAR real: ida y vuelta idéntica, repetición con 0 insertados, línea corrupta con mensaje y staging conservado, subcomando desconocido con código 1, cobertura y stderr en modo detallado; verificar con `uv run pytest`
 
 ## 3. Documentación
 
