@@ -5,6 +5,7 @@ import argparse
 from clima_medellin import __version__
 from clima_medellin.bridge import JavaBridge
 from clima_medellin.menu import Menu
+from clima_medellin.ui import make_console
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,5 +19,5 @@ def main(argv: list[str] | None = None) -> int:
         "--verbose", action="store_true", help="muestra los mensajes de registro del JAR de Java"
     )
     args = parser.parse_args(argv)
-    Menu(JavaBridge(verbose=args.verbose)).run()
+    Menu(JavaBridge(verbose=args.verbose), console=make_console()).run()
     return 0

@@ -2,9 +2,9 @@
 
 ## 1. Interfaz
 
-- [ ] 1.1 Añadir `rich` y crear `clima_medellin/ui.py` (consola, tablas desde DataFrame, panel «Qué significa», prefijos con color y palabra, estilos de estado, traducciones de términos) con pruebas de salida sin color (`NO_COLOR` y archivo); verificar con `uv run pytest`
-- [ ] 1.2 Rehacer `menu.py` con `rich`: menú agrupado con 0 = Salir, cabecera con estado en caché, tablas, paneles «Qué significa» en las opciones 1–5 y 7, entradas con ejemplo y errores explicados, progreso en descarga y gráficas, opción 6 «próximamente»; actualizar `cli.py`; verificar con `uv run ruff check .`
-- [ ] 1.3 Adaptar `test_menu.py` y `test_cli.py` a la consola de grabación (extremo a extremo, opción inválida, salida con 0, cabecera vacía, opción 6, fecha inválida explicada, paneles «Qué significa»); verificar con `uv run pytest`
+- [x] 1.1 Añadir `rich` y crear `clima_medellin/ui.py` (consola, tablas desde DataFrame, panel «Qué significa», prefijos con color y palabra, estilos de estado, traducciones de términos) con pruebas de salida sin color (`NO_COLOR` y archivo); verificar con `uv run pytest`
+- [x] 1.2 Rehacer `menu.py` con `rich`: menú agrupado con 0 = Salir, cabecera con estado en caché, tablas, paneles «Qué significa» en las opciones 1–5 y 7, entradas con ejemplo y errores explicados, progreso en descarga y gráficas, opción 6 «próximamente»; actualizar `cli.py`; verificar con `uv run ruff check .`
+- [x] 1.3 Adaptar `test_menu.py` y `test_cli.py` a la consola de grabación (extremo a extremo, opción inválida, salida con 0, cabecera vacía, opción 6, fecha inválida explicada, paneles «Qué significa»); verificar con `uv run pytest`
 
 ## 2. Documentación
 

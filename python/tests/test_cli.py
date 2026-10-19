@@ -18,7 +18,7 @@ def test_version_flag_prints_version(capsys):
 class FakeMenu:
     instances: list[FakeMenu] = []
 
-    def __init__(self, bridge):
+    def __init__(self, bridge, console=None):
         self.bridge = bridge
         FakeMenu.instances.append(self)
 
@@ -50,7 +50,7 @@ def test_console_script_is_installed():
 def test_console_script_exits_cleanly_on_option_7():
     executable = shutil.which("clima-medellin")
     result = subprocess.run(
-        [executable], input="7\n", capture_output=True, text=True, check=False, timeout=60
+        [executable], input="0\n", capture_output=True, text=True, check=False, timeout=60
     )
     assert result.returncode == 0
     assert "CLIMA MEDELLÍN" in result.stdout and "Hasta pronto." in result.stdout
