@@ -120,7 +120,7 @@ Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen r
 | Tarde | 14:00 | 13–15 h | 13:00, 14:00, 15:00 | 18:00, 19:00, 20:00 (mismo día) |
 | Noche | 20:00 | 19–21 h | 19:00, 20:00, 21:00 | 00:00, 01:00, 02:00 (**día siguiente**) |
 
-[Supuesto] Las horas 8, 14 y 20 representan la hora punta de la mañana (capa de mezcla todavía baja), el máximo de calentamiento y el inicio de la noche. Son hipótesis que el perfil diurno de la Fase 6 debe confirmar o corregir.
+[Supuesto] Las horas 8, 14 y 20 representan la hora punta de la mañana (capa de mezcla todavía baja), el máximo de calentamiento y el inicio de la noche. Son hipótesis que el perfil diurno debía confirmar o corregir; el resultado de la Fase 6 está en [Perfil diurno](#perfil-diurno).
 
 ### Zona horaria y cambios de fecha
 
@@ -169,6 +169,26 @@ El perfil diurno es la media de cada variable para cada hora local (0–23). Sir
 
 - Se calcula **solo con el conjunto de entrenamiento** (ver [regresion.md](regresion.md#separación-temporal-con-hueco)). Si se usara todo el año y luego se eligieran las franjas o variables en función de él, el periodo de prueba influiría en el diseño (una forma de fuga de información).
 - Se muestra con el número de valores válidos por hora, para no confundir una media con 300 datos y otra con 40.
+- Implementación (Fase 6): `bands.diurnal_profile`, con la separación de `split.temporal_split` ([implementacion.md](implementacion.md#64-perfil-diurno-solo-con-el-entrenamiento)).
+
+### Resultado con las muestras de la Fase 1
+
+Perfil calculado con las muestras de `samples/` y la ventana de D = 2026-10-18, solo con el entrenamiento (2025-10-18 → 2026-07-18, 273 valores por hora):
+
+| Variable | Máximo (hora local) | Mínimo (hora local) |
+|---|---|---|
+| Temperatura | 23,8 °C a las 17 h | 18,2 °C a las 6 h |
+| Humedad relativa | 94,5 % a las 6 h | 76,4 % a las 14 h |
+| Viento | 1,0 m/s a las 13 h | 0,5 m/s a las 5 h |
+| PM2.5 | 21,3 µg/m³ a las 21 h | 6,8 µg/m³ a las 13 h |
+
+Medias por franja en el mismo periodo: temperatura 19,1 / 22,6 / 23,0 °C, humedad 90,4 / 76,5 / 80,5 %, viento 0,69 / 0,95 / 0,85 m/s y PM2.5 11,0 / 7,0 / 20,3 µg/m³ (mañana / tarde / noche), con 273 días válidos en cada franja.
+
+Qué confirma y qué corrige:
+
+- **Mañana (7–9 h):** la humedad está cerca de su máximo y la temperatura cerca de su mínimo, coherente con un aire todavía frío y estable.
+- **Tarde (13–15 h):** coincide con el mínimo de humedad, el mínimo de PM2.5 y el máximo de viento. **Pero el máximo de temperatura llega más tarde, hacia las 17 h**, no a las 14 h. La celda de ERA5 (~25 km, con montañas alrededor del valle) se calienta y se enfría con retraso respecto al centro de la ciudad [Supuesto]. Las franjas se mantienen (D-009 es definitiva), pero la franja de la tarde no representa el máximo diario de temperatura del modelo.
+- **Noche (19–21 h):** PM2.5 está en su máximo. Atención: el perfil muestra un salto de 11,0 a 18,9 µg/m³ entre las 18 y las 19 h y otro de 17,6 a 13,2 µg/m³ entre las 6 y las 7 h, justo en los empalmes del pronóstico de CAMS (00 y 12 UTC). Parte de la diferencia entre la noche y las demás franjas es un efecto del empalme, no de la atmósfera (ver [PM2.5 horario y empalmes del pronóstico](#pm25-horario-y-empalmes-del-pronóstico)).
 
 ## Limitaciones y supuestos
 

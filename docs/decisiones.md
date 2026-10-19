@@ -192,7 +192,7 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 ## D-018 — Split temporal 9 + 3 meses con hueco de 24 h
 
 - **Contexto:** los datos horarios están autocorrelacionados; un *split* aleatorio mezclaría horas vecinas entre entrenamiento y prueba.
-- **Decisión:** entrenamiento = [inicio de la ventana, inicio + 9 meses naturales); después se descartan 24 h; prueba = el resto de la ventana. Las fechas exactas se imprimen con los resultados. El perfil diurno se calcula solo con el entrenamiento.
+- **Decisión:** entrenamiento = [inicio de la ventana, inicio + 9 meses naturales); después se descartan 24 h; prueba = el resto de la ventana. Si el día no existe nueve meses después, se usa el último día de ese mes. Las fechas exactas se imprimen con los resultados. El perfil diurno se calcula solo con el entrenamiento. Ejemplo: con la ventana 2025-10-18 → 2026-10-18 (hora local), entrenamiento hasta el 2026-07-18 y prueba desde el 2026-07-19, a las 00:00 locales (implementado en `split.temporal_split`, Fase 6).
 - **Consecuencias y limitaciones:** la prueba cubre una sola época del año, distinta de la del entrenamiento, así que las métricas dependen de la estacionalidad. Ver [regresion.md](regresion.md#separación-temporal-con-hueco).
 - **Estado:** definitiva.
 

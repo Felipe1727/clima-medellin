@@ -14,7 +14,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 3 | Ingesta y normalización en Python | [x] | 1 |
 | 4 | Puente Java↔Python | [x] | 2, 3 |
 | 5 | Cobertura histórica e incrementos | [x] | 4 |
-| 6 | Franjas horarias y estadística descriptiva | [ ] | 5 |
+| 6 | Franjas horarias y estadística descriptiva | [x] | 5 |
 | 7 | Regresión lineal y evaluación | [ ] | 6 |
 | 8 | Visualizaciones | [ ] | 6, 7 |
 | 9 | CLI integrada, pruebas finales y defensa | [ ] | 1–8 |
@@ -199,10 +199,10 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** describir los datos (distribuciones, perfil diurno, franjas) y confirmar o corregir las hipótesis de las franjas.
 
 **Entregables:**
-- [ ] Perfil diurno de cada variable, calculado **solo con datos de entrenamiento** (las fechas del split se fijan aquí de forma preliminar).
-- [ ] Cálculo de franjas con la regla de mínimo de horas y NaN.
-- [ ] Decisión sobre el tratamiento de PM2.5 en las franjas (DP-01).
-- [ ] Tablas descriptivas por variable y por franja.
+- [x] Perfil diurno de cada variable, calculado **solo con datos de entrenamiento** (`bands.diurnal_profile`; separación definitiva en `split.temporal_split`). Resultado con las muestras en [cobertura-y-franjas.md](cobertura-y-franjas.md#resultado-con-las-muestras-de-la-fase-1).
+- [x] Cálculo de franjas con la regla de mínimo de horas y NaN (`bands.daily_bands`).
+- [x] Decisión sobre el tratamiento de PM2.5 en las franjas (DP-01): la misma regla que las demás variables, con la advertencia de los empalmes.
+- [x] Tablas descriptivas por variable y por franja (`descriptive.py`).
 
 **Conceptos que se estudiarán:**
 - *Perfil diurno*: identificar el ciclo típico del día.
@@ -214,9 +214,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 5.
 
-**Decisiones abiertas:** DP-01; D-009 pasa a definitiva o se corrige.
+**Decisiones abiertas:** DP-01 (resuelta); D-009 definitiva. El perfil muestra que el máximo de temperatura de ERA5 llega hacia las 17 h, más tarde que la franja de la tarde; se documenta sin cambiar las franjas.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 

@@ -53,7 +53,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [3. Descarga de Open-Meteo y normalización con Pandas](#3-descarga-de-open-meteo-y-normalización-con-pandas) | Disponible | `ingest` |
 | [4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python](#4-puente-javapython-subprocesos-json-lines-y-de-objectdb-a-python) | Disponible | `bridge` |
 | [5. Ventana móvil, cobertura e intervalos faltantes](#5-ventana-móvil-cobertura-e-intervalos-faltantes) | Disponible | `coverage` |
-| 6. Zonas horarias, franjas y estadística descriptiva | Pendiente | `bands-stats` |
+| [6. Zonas horarias, franjas y estadística descriptiva](#6-zonas-horarias-franjas-y-estadística-descriptiva) | Disponible | `bands-stats` |
 | 7. Unión de datos, split temporal y regresión | Pendiente | `regression` |
 | 8. Gráficas con Matplotlib | Pendiente | `visualizations` |
 | 9. Menú de la CLI | Pendiente | `cli-integration` |
@@ -975,3 +975,141 @@ resultados = execute_plan(bridge, plan)            # descarga e importa cada pet
 
 - Si la API no devuelve ningún valor para una petición, se importa igualmente un lote vacío: queda un `IngestionBatch` con 0 recibidos y 0 insertados, que demuestra que el hueco es de la fuente y no un fallo del proceso (prueba `test_empty_api_answer_still_records_a_batch`).
 - La función `fetch` se inyecta: en producción es `openmeteo.fetch`; en las pruebas, `FakeOpenMeteo` (`python/tests/fakes.py`).
+
+---
+
+## 6. Zonas horarias, franjas y estadística descriptiva
+
+El código está en `python/src/clima_medellin/`: `split.py` (entrenamiento y prueba), `dataset.py` (tabla de análisis), `bands.py` (franjas y perfil diurno) y `descriptive.py` (estadísticas). Las reglas están en [cobertura-y-franjas.md](cobertura-y-franjas.md#franjas-horarias). Las pruebas `test_bands.py` y `test_descriptive.py` comprueban los resultados con un día y una serie calculados a mano.
+
+### 6.1 La tabla de análisis: unir las dos fuentes
+
+**Concepto.** Para describir los datos se necesita una sola tabla con las cuatro variables. ERA5 y CAMS se exportan por separado (sección 4.4) y se **unen por el índice** (el timestamp UTC). Un `outer join` conserva las horas que solo tiene una de las dos fuentes; por ejemplo, los últimos días de PM2.5, para los que ERA5 aún no ha publicado.
+
+**Sintaxis básica.**
+
+```python
+meteo = pd.DataFrame({"t": [20.0]}, index=[h10])
+aire = pd.DataFrame({"pm": [12.0, 15.0]}, index=[h10, h11])
+meteo.join(aire, how="outer")
+#        t     pm
+# h10  20.0  12.0
+# h11   NaN  15.0
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/dataset.py -->
+```python
+    joined = weather[ERA5.columns].join(air[CAMS_GLOBAL.columns], how="outer")
+    return joined.sort_index()[COLUMNS]
+```
+
+- Se seleccionan solo las columnas canónicas (se descarta `batch_id`).
+- La regresión (sección 7) usará en cambio un `inner join` y quitará las filas con algún nulo, porque necesita las cuatro variables a la vez.
+
+### 6.2 De UTC a hora de Medellín
+
+**Concepto.** Los datos se guardan en UTC (D-008), pero las franjas son locales. Un índice de Pandas **con zona horaria** se convierte con `tz_convert`, que cambia la hora mostrada sin cambiar el instante. Se usa el nombre de la zona (`America/Bogota`) y no un desfase fijo de −5, aunque Colombia no tenga horario de verano (PV-16).
+
+**Sintaxis básica.**
+
+```python
+idx = pd.DatetimeIndex(["2026-04-13 00:00"], tz="UTC")
+idx.tz_convert("America/Bogota")      # 2026-04-12 19:00:00-05:00  (¡el día anterior!)
+```
+
+**Cuidado.** `tz_localize` y `tz_convert` no son lo mismo: `tz_localize` **declara** la zona de unas horas sin zona; `tz_convert` **traduce** unas horas que ya tienen zona. Aplicar `tz_localize("America/Bogota")` a horas UTC las desplazaría 5 horas.
+
+### 6.3 Franjas: `groupby` por día civil local y mínimo de 2 horas
+
+**Concepto.** Cada franja (mañana 07–09, tarde 13–15, noche 19–21) vale el **promedio de los valores no nulos** de sus 3 horas, y **NaN si hay menos de 2** (D-009). El promedio se agrupa por el **día civil local**: la franja de la noche del 12 de abril son las 00:00–02:00 UTC del **13**, y agrupar por día UTC la asignaría al día equivocado.
+
+**Sintaxis básica.**
+
+```python
+s = pd.Series([17.8, None, 19.6], index=horas_locales_7_8_9)
+s.mean()     # 18.7  (mean ignora los NaN)
+s.count()    # 2     (count cuenta solo los valores no nulos)
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/bands.py -->
+```python
+    local = to_local(frame)
+    pieces = {}
+    for band, hours in BANDS.items():
+        in_band = local[local.index.hour.isin(hours)]
+        # Se agrupa por el día civil local, no por el día UTC: la noche (19-21 h) cae
+        # en el día UTC siguiente (00-02 UTC).
+        grouped = in_band.groupby(in_band.index.date)
+        mean, count = grouped.mean(), grouped.count()
+        pieces[band] = mean.where(count >= MIN_VALID_HOURS)
+```
+
+- `local.index.hour.isin(hours)` se queda con las filas cuya hora **local** es 7, 8 o 9 (o 13–15, o 19–21).
+- `groupby(in_band.index.date)` agrupa por la fecha local de cada fila.
+- `mean()` promedia ignorando los NaN y `count()` cuenta los valores no nulos de cada grupo.
+- `mean.where(count >= 2)` deja el promedio donde hay al menos 2 valores y pone NaN donde no. **No se interpola**: un NaN significa «ese día no hay datos suficientes para esa franja».
+- Una hora **sin fila** cuenta igual que una hora con NaN: no entra en `count`.
+
+El resultado es una tabla con un día local por fila y columnas `(variable, franja)`. Comprobación a mano (prueba `test_hand_computed_day`): el 12 de abril, temperatura 17,8 °C a las 07:00, falta a las 08:00 y 19,6 °C a las 09:00 → mañana = (17,8 + 19,6) / 2 = **18,7 °C**; si en la tarde solo hay un valor → **NaN**.
+
+**Cuidado.** Para PM2.5, las franjas de la mañana y de la noche empiezan en un empalme del pronóstico de CAMS (12 y 00 UTC); ver [cobertura-y-franjas.md](cobertura-y-franjas.md#pm25-horario-y-empalmes-del-pronóstico).
+
+### 6.4 Perfil diurno solo con el entrenamiento
+
+**Concepto.** El **perfil diurno** es la media de cada variable para cada hora local (0–23): muestra el ciclo típico del día y si las franjas caen en sus momentos característicos. Se calcula **solo con el periodo de entrenamiento** (D-018): si se usara todo el año y después se decidiera algo a partir de él, el periodo de prueba influiría en el diseño (fuga de información, [regresion.md](regresion.md#pipeline-y-prevención-de-fuga-de-información)).
+
+**En este proyecto.** La separación vive en `split.py`: entrenamiento = 9 meses naturales desde el inicio de la ventana, 24 h descartadas y prueba = el resto (con la ventana de 2025-10-18 a 2026-10-18, el entrenamiento termina el 2026-07-18 y la prueba empieza el 2026-07-19, ambos a las 00:00 locales).
+
+<!-- fragmento: python/src/clima_medellin/bands.py -->
+```python
+    local = to_local(split.train(frame))
+    grouped = local.groupby(local.index.hour)
+    profile = pd.concat({"media": grouped.mean(), "n": grouped.count()}, axis=1).swaplevel(axis=1)
+    columns = pd.MultiIndex.from_product([frame.columns, ["media", "n"]])
+    profile = profile.reindex(index=range(24), columns=columns)
+```
+
+- `split.train(frame)` filtra `[train_start, train_end)`; la prueba `test_diurnal_profile_uses_only_the_training_period` pone valores distintos en la prueba y comprueba que no aparecen en el perfil.
+- `groupby(local.index.hour)` agrupa por hora local; junto a la media se guarda `n`, el número de valores válidos, para no confundir una media de 270 datos con una de 40.
+- `reindex(index=range(24))` garantiza las 24 horas aunque alguna no tenga datos.
+
+### 6.5 Estadísticas descriptivas y percentiles
+
+**Concepto.** Para cada variable se calculan n (valores válidos), nulos, media, mediana, desviación estándar, mínimo, máximo y los **percentiles** 5, 25, 75 y 95. Un percentil *p* es el valor por debajo del cual queda el *p* % de los datos; mediana y percentiles son **robustos**: no los mueve un pico aislado, a diferencia de la media. Son útiles para PM2.5, que es asimétrica (mediana 10,6 µg/m³ frente a media 12,9 µg/m³ en la muestra anual).
+
+**Sintaxis básica.**
+
+```python
+s = pd.Series(range(1, 101))
+s.quantile(0.25)   # 25.75 (interpolación lineal entre el 25 y el 26)
+s.median()         # 50.5
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/descriptive.py -->
+```python
+        values = frame[column]
+        valid = values.dropna()
+        row = {
+            "n": int(valid.size),
+            "nulos": int(values.isna().sum()),
+            "media": valid.mean(),
+            "mediana": valid.median(),
+            "desv": valid.std(),
+            "min": valid.min(),
+            "max": valid.max(),
+        }
+        for name, q in PERCENTILES.items():
+            row[name] = valid.quantile(q)
+```
+
+- Todas las medidas se calculan sobre `valid` (sin NaN), y los nulos se cuentan aparte para que se vean.
+- `std()` usa por defecto la desviación **muestral** (divide entre n − 1).
+- `describe_bands` hace lo mismo por franja: la media de las franjas válidas y el número de **días válidos**, para saber en cuántos días se apoya cada media.
+
+**Cuidado.** `nulos` cuenta los valores nulos de las filas presentes; las horas que no tienen ningún registro no aparecen aquí: las informa la cobertura (sección 5).
