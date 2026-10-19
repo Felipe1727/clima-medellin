@@ -9,7 +9,7 @@
 ## 2. Documentación
 
 - [x] 2.1 Escribir D-025, actualizar `docs/cli-y-visualizaciones.md` (menú y pantallas nuevas), la sección 11 de `docs/implementacion.md` con fragmentos reales, `docs/fases.md` (Fase 10) y el menú del `README.md`; verificar con `uv run pytest`
-- [ ] 2.2 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
+- [x] 2.2 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up
 
