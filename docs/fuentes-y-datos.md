@@ -162,6 +162,19 @@ ERA5 llega con 5 días de retraso y devuelve los días no publicados como `null`
 
 El dominio europeo de CAMS no cubre Colombia, así que solo sirve el global. ERA5 es global.
 
+## Rangos plausibles
+
+Antes de guardar, la ingesta convierte en `null` (y cuenta) los valores físicamente imposibles. Los rangos son **amplios a propósito**: no buscan valores raros, solo errores evidentes; nunca se sustituye un valor por otro inventado (D-012).
+
+| Variable | Rango aceptado | Motivo | Valores reales en la muestra anual |
+|---|---|---|---|
+| Temperatura a 2 m | −20 … 50 °C | Muy por fuera de lo posible en Medellín (≈ 1 500 m de altitud) | 15,5 … 30,4 °C |
+| Humedad relativa a 2 m | 0 … 100 % | Definición de humedad relativa | 42 … 100 % |
+| Viento a 10 m | 0 … 75 m/s | Una velocidad negativa no existe; 75 m/s supera un huracán de categoría 5 | 0,0 … 3,1 m/s |
+| PM2.5 | 0 … 1 000 µg/m³ | Una concentración negativa no existe; 1 000 µg/m³ supera los peores episodios de humo | 0,8 … 49,9 µg/m³ |
+
+Los rangos están definidos en `python/src/clima_medellin/config.py` y se aplican en `normalize.py` ([implementacion.md](implementacion.md#34-validar-sin-inventar-valores-where-duplicados-y-recortes)).
+
 ## Licencia y atribución
 
 - **Open-Meteo:** los datos de la API se publican bajo **CC BY 4.0**. Hay que dar crédito e indicar las modificaciones; el ejemplo de atribución es «Weather data by Open-Meteo.com» con un enlace a open-meteo.com [Verificado: [Open-Meteo – licencia](https://open-meteo.com/en/licence) y [precios](https://open-meteo.com/en/pricing)].

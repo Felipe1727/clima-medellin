@@ -113,7 +113,7 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 
 - **Contexto:** las franjas son locales (mañana, tarde, noche), pero las marcas de tiempo deben ser inequívocas.
 - **Opciones consideradas:** (a) guardar en UTC y convertir al analizar; (b) guardar la hora local; (c) guardar ambas.
-- **Decisión:** (a). Colombia usa UTC−5 sin horario de verano [Por verificar contra la base de datos tz, Fase 3]. La API devuelve por defecto horas en GMT [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)], lo que encaja con esta decisión.
+- **Decisión:** (a). Colombia usa UTC−5 sin horario de verano [Verificado: la base de datos tz da UTC−5 en todas las horas de 2025 y 2026, prueba `test_bogota_is_utc_minus_5_all_year`, Fase 3]. La API devuelve por defecto horas en GMT [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)], lo que encaja con esta decisión.
 - **Consecuencias y limitaciones:** cada análisis local requiere una conversión explícita, y la franja de la noche (19–21 h local) cae en el día UTC siguiente (00–02 UTC). Ver [cobertura-y-franjas.md](cobertura-y-franjas.md#zona-horaria-y-cambios-de-fecha).
 - **Estado:** definitiva.
 

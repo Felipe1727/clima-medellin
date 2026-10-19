@@ -11,8 +11,8 @@
 
 ## 3. Documentación
 
-- [ ] 3.1 Escribir la sección 3 de `docs/implementacion.md` (petición HTTP con requests, reintentos, JSON → DataFrame, UTC, validación con `where`, NaN frente a 0) con fragmentos reales; verificar con `uv run pytest`
-- [ ] 3.2 Documentar los rangos plausibles en `docs/fuentes-y-datos.md`, marcar la Fase 3 en `docs/fases.md` (PV-16 y PV-17 resueltos), actualizar la nota de PV-16 en `docs/cobertura-y-franjas.md` y `docs/decisiones.md` (D-008) y los requisitos con versiones reales en `README.md`; verificar que no quedan `[Por verificar, Fase 3]`
+- [x] 3.1 Escribir la sección 3 de `docs/implementacion.md` (petición HTTP con requests, reintentos, JSON → DataFrame, UTC, validación con `where`, NaN frente a 0) con fragmentos reales; verificar con `uv run pytest`
+- [x] 3.2 Documentar los rangos plausibles en `docs/fuentes-y-datos.md`, marcar la Fase 3 en `docs/fases.md` (PV-16 y PV-17 resueltos), actualizar la nota de PV-16 en `docs/cobertura-y-franjas.md` y `docs/decisiones.md` (D-008) y los requisitos con versiones reales en `README.md`; verificar que no quedan `[Por verificar, Fase 3]`
 - [ ] 3.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

@@ -22,7 +22,7 @@ Definiciones breves de los términos que se usan en la documentación del proyec
 | Término | Definición |
 |---|---|
 | **UTC** (*Coordinated Universal Time*) | Hora de referencia mundial, sin horario de verano. Todas las marcas de tiempo se almacenan en UTC (D-008). |
-| **Zona horaria** (*time zone*) | Regla que convierte UTC en hora local. Se usa `America/Bogota`, que es UTC−5 sin horario de verano ([Por verificar en la Fase 3]). Ejemplo: 13:00 UTC equivale a las 8:00 en Medellín. |
+| **Zona horaria** (*time zone*) | Regla que convierte UTC en hora local. Se usa `America/Bogota`, que es UTC−5 sin horario de verano (verificado en la Fase 3). Ejemplo: 13:00 UTC equivale a las 8:00 en Medellín. |
 | **Cobertura temporal** (*temporal coverage*) | Proporción de pasos esperados que tienen un valor no nulo en un periodo. Por ejemplo, 8 700 de 8 760 horas equivalen a un 99,3 % ([cobertura-y-franjas.md](cobertura-y-franjas.md#criterio-de-cobertura)). |
 | **Hueco** (*gap*) | Secuencia continua de pasos esperados sin valor. Un hueco de 6 h en la temperatura, entre las 10:00 y las 15:59 locales, borra justo el máximo diario. |
 | **Perfil diurno** (*diurnal profile*) | Valor medio de una variable para cada hora local del día (0–23), calculado sobre muchos días. Muestra el ciclo típico; por ejemplo, el mínimo de temperatura al amanecer. |

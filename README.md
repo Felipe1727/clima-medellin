@@ -59,15 +59,15 @@ clima-medellin/
 └── outputs/            gráficas PNG (se crea al ejecutar)
 ```
 
-## Requisitos (previstos, por verificar)
+## Requisitos
 
 | Componente | Previsto | Estado |
 |---|---|---|
-| Python | Versión 3 reciente | Por verificar (Fase 3) |
-| Pandas, scikit-learn, Matplotlib | Versiones estables actuales | Por verificar (Fases 3, 7 y 8) |
-| Cliente HTTP para Python | Por decidir | Por verificar (Fase 3) |
-| Java | ≥ 8 (variante `javax` de ObjectDB) o ≥ 17 (variante `jakarta`) | Requisito verificado en la documentación de ObjectDB; versión instalada por verificar (Fase 2) |
-| ObjectDB | 2.9.5, versión gratuita (máximo 10 clases de entidad y 1 millón de entidades por archivo) | Verificado en la documentación oficial; prueba práctica pendiente (Fase 2) |
+| Python | 3.14 (gestionado con [uv](https://docs.astral.sh/uv/)) | Verificado: 3.14.7 (Fase 3) |
+| Pandas, scikit-learn, statsmodels, Matplotlib | Versiones fijadas en `python/uv.lock` | Verificado: pandas 3.0.6, scikit-learn 1.9.1, statsmodels 0.15.0, Matplotlib 3.11.2 (Fase 3) |
+| Cliente HTTP para Python | requests | Verificado: 2.34.2 (Fase 3) |
+| Java | 25, con Maven 3.9 | Verificado (Fase 2) |
+| ObjectDB | 2.9.5, variante `jakarta` (`objectdb-jk`), versión gratuita (máximo 10 clases de entidad y 1 millón de entidades por archivo) | Verificado con las pruebas de la Fase 2 |
 | Conexión a internet | Acceso a las APIs de Open-Meteo (uso gratuito no comercial) | — |
 
 ## Principales limitaciones
