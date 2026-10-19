@@ -13,7 +13,7 @@ Al instalar el proyecto Python, SHALL quedar disponible el comando `clima-medell
 - **THEN** se imprime `clima-medellin <versión>` y el código de salida es 0
 
 #### Scenario: Ejecución sin opciones
-- **WHEN** se ejecuta `clima-medellin` sin opciones y el usuario elige la opción 7
+- **WHEN** se ejecuta `clima-medellin` sin opciones y el usuario elige la opción 0
 - **THEN** se muestra el menú, después un mensaje de despedida, y el código de salida es 0
 
 #### Scenario: Modo detallado

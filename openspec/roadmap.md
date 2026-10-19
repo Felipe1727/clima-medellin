@@ -303,7 +303,7 @@ range of up to 31 days, evaluated honestly against a baseline.
       in `fases.md`, `implementacion.md` section on one-hot and cyclic features with real excerpts.
   - Depends on: cli-integration
 
-- [ ] `cli-ux` — rich look and plain-language layer for the existing menu
+- [x] `cli-ux` — rich look and plain-language layer for the existing menu
   - Acceptance:
     - Menu regrouped as locked (DATOS / ANÁLISIS / PREDICCIONES, 0 = Salir; option 6 may show
       "próximamente" until `prediction-menu`), header with location, window and coloured state.
