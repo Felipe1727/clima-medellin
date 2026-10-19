@@ -103,7 +103,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
 
 ## Specs (execute in order)
 
-- [ ] `project-scaffold` — Maven + uv projects, CI, implementation guide skeleton and excerpt check
+- [x] `project-scaffold` — Maven + uv projects, CI, implementation guide skeleton and excerpt check
   - Acceptance:
     - `java/` builds with `mvn verify` into `java/target/clima-medellin.jar` (deps above); running it
       with no/unknown subcommand prints one JSON error object to stdout and exits 1 (JUnit test).
