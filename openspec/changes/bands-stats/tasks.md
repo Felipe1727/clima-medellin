@@ -14,7 +14,7 @@
 
 - [x] 3.1 Escribir la sección 6 de `docs/implementacion.md` (conversión de zona horaria, `groupby` por día local, NaN y mínimo de horas, perfil diurno, percentiles) con fragmentos reales; verificar con `uv run pytest`
 - [x] 3.2 Dejar `docs/cobertura-y-franjas.md` en su versión final (implementación de franjas y perfil), marcar la Fase 6 en `docs/fases.md` y anotar las fechas de la separación en D-018 (`docs/decisiones.md`); verificar que no quedan decisiones de la Fase 6 pendientes
-- [ ] 3.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
+- [x] 3.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up
 
