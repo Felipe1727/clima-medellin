@@ -72,10 +72,10 @@ clima-medellin/
 
 ## Principales limitaciones
 
-- **Todo son modelos:** la meteorología es un reanálisis (ERA5, ~25 km) y el PM2.5 es un pronóstico archivado (CAMS global, ~45 km, paso de 3 h). Ninguno resuelve el valle de Aburrá ni equivale a una medición.
+- **Todo son modelos:** la meteorología es un reanálisis (ERA5, ~25 km) y el PM2.5 es un pronóstico archivado (CAMS global, ~45 km). Ninguno resuelve el valle de Aburrá ni equivale a una medición.
 - **La regresión describe asociaciones entre modelos**, no causas ni la calidad del aire real.
 - **La ventana es móvil:** los resultados cambian según la fecha de ejecución.
-- **El paso de 3 h de PM2.5** obliga a revisar las franjas y la cobertura (decisiones pendientes de la Fase 1).
+- **Los empalmes del pronóstico de CAMS** (00 y 12 UTC) producen saltos artificiales en PM2.5 justo al inicio de las franjas de la mañana y de la noche; se documentan y se muestran, pero no se corrigen.
 
 El detalle está en [docs/fuentes-y-datos.md](docs/fuentes-y-datos.md#limitaciones-de-los-datos).
 

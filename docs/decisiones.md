@@ -18,27 +18,27 @@ Este documento reúne las decisiones de diseño del proyecto en un formato liger
 | [D-002](#d-002--java-es-el-único-que-accede-a-objectdb) | Java es el único que abre ObjectDB | Definitiva | — |
 | [D-003](#d-003--comunicación-entre-procesos-mediante-un-jar-con-subcomandos) | Comunicación por procesos: JAR con subcomandos | Definitiva | Fase 4 (detalles) |
 | [D-004](#d-004--intercambio-de-lotes-en-json-lines-y-reglas-de-stdoutstderr) | Lotes en JSON Lines; stdout solo JSON; logs en stderr | Definitiva | Fase 4 (detalles) |
-| [D-005](#d-005--meteorología-open-meteo-historical-con-era5-explícito) | Meteorología: ERA5 explícito | Provisional | Fase 1 |
-| [D-006](#d-006--calidad-del-aire-pm25-de-cams-global-vía-open-meteo) | PM2.5 de CAMS global (modelo) | **Pendiente de revisión** | Fase 1 |
-| [D-007](#d-007--un-único-punto-representativo-de-medellín) | Un único punto representativo | Provisional | Fase 1 |
+| [D-005](#d-005--meteorología-open-meteo-historical-con-era5-explícito) | Meteorología: ERA5 explícito (`models=era5`) | Definitiva | — |
+| [D-006](#d-006--calidad-del-aire-pm25-de-cams-global-vía-open-meteo) | PM2.5 de CAMS global (modelo), tratado como horario | Definitiva | — |
+| [D-007](#d-007--un-único-punto-representativo-de-medellín) | Un único punto representativo (`MED-CENTRO`, 1 495 m) | Definitiva | — |
 | [D-008](#d-008--almacenar-en-utc-calcular-en-americabogota) | UTC para almacenar; America/Bogota para calcular | Definitiva | — |
-| [D-009](#d-009--franjas-horarias-mañana-tarde-y-noche) | Franjas 7–9, 13–15 y 19–21 h, con un mínimo de 2 de 3 horas | **Pendiente de revisión** | Fases 1 y 6 |
+| [D-009](#d-009--franjas-horarias-mañana-tarde-y-noche) | Franjas 7–9, 13–15 y 19–21 h, con un mínimo de 2 de 3 horas, para las 4 variables | Definitiva | — |
 | [D-010](#d-010--cuatro-entidades-en-objectdb) | Cuatro entidades en ObjectDB | Provisional | Fase 2 |
 | [D-011](#d-011--clave-natural-ubicación--fuente--timestamp-utc) | Clave natural: ubicación + fuente + timestamp UTC | Definitiva | Fase 2 (implementación) |
 | [D-012](#d-012--ausentes-como-null-nunca-como-0) | Ausentes como null, nunca 0 | Definitiva | — |
-| [D-013](#d-013--solo-inserciones-correcciones-mediante-lote-explícito) | Solo inserciones; correcciones mediante un lote explícito | Provisional | Fase 2 |
+| [D-013](#d-013--solo-inserciones-correcciones-mediante-lote-explícito) | Solo inserciones; sin correcciones | Definitiva | — |
 | [D-014](#d-014--criterio-de-cobertura-98--y-hueco-máximo-de-6-h) | Cobertura COMPLETA: ≥ 98 % y hueco ≤ 6 h | Provisional | Fase 5 |
 | [D-015](#d-015--actualización-incremental-respetando-la-latencia) | Actualización incremental respetando la latencia | Definitiva | Fase 5 (detalles) |
 | [D-016](#d-016--ventana-móvil-de-un-año) | Ventana móvil de un año | Definitiva | Fase 5 (caso del 29 de febrero) |
 | [D-017](#d-017--regresión-lineal-pm25--temperatura--humedad--viento) | Regresión lineal: PM2.5 ~ temperatura + humedad + viento | Definitiva | — |
-| [D-018](#d-018--split-temporal-9--3-meses-con-hueco-de-24-h) | Split temporal de unos 9 + 3 meses con hueco de 24 h | Provisional | Fase 7 |
+| [D-018](#d-018--split-temporal-9--3-meses-con-hueco-de-24-h) | Split temporal: 9 meses naturales + resto, con hueco de 24 h | Definitiva | — |
 | [D-019](#d-019--pipeline-con-escalador-ajustado-solo-con-entrenamiento) | Pipeline con escalador ajustado solo con entrenamiento | Definitiva | — |
 | [D-020](#d-020--línea-base-y-métricas) | Línea base = media del entrenamiento; MAE, RMSE y R² | Definitiva | — |
 | [D-021](#d-021--las-franjas-se-calculan-y-no-se-persisten) | Las franjas se calculan y no se persisten | Definitiva | — |
-| [D-022](#d-022--unidades-canónicas) | Unidades canónicas (°C, %, m/s, µg/m³) | Provisional | Fase 3 |
-| [D-023](#d-023--visualizaciones-con-matplotlib-en-ventana-o-png) | Matplotlib, con salida en ventana o PNG | Provisional | Fase 8 |
+| [D-022](#d-022--unidades-canónicas) | Unidades canónicas (°C, %, m/s, µg/m³) | Definitiva | — |
+| [D-023](#d-023--visualizaciones-con-matplotlib-en-ventana-o-png) | Matplotlib, con salida en ventana o PNG | Definitiva | — |
 
-Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-023 se añaden aquí porque se derivan de ellas y conviene dejarlas por escrito; ambas son provisionales.
+Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-023 se añaden aquí porque se derivan de ellas y conviene dejarlas por escrito. Las decisiones que estaban abiertas se cerraron en la sesión de exploración del 2026-10-18, con los resultados de la Fase 1; el resultado completo está en [openspec/roadmap.md](../openspec/roadmap.md).
 
 ---
 
@@ -82,8 +82,8 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
   - *Best match* combina IFS HRES, ERA5 y ERA5-Land [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)], y eso podría cambiar el modelo de origen dentro de la serie.
   - ERA5-Land no ofrece velocidad del viento [Verificado: misma fuente].
   - ERA5-Seamless mezcla temperatura y humedad de ERA5-Land con viento de ERA5 [Verificado: misma fuente], es decir, dos resoluciones distintas en un mismo registro.
-- **Consecuencias y limitaciones:** la resolución es de 0,25° (~25 km), la serie es horaria y hay un retraso de 5 días [Verificado: misma fuente]. Una celda de 25 km no resuelve el valle de Aburrá: es un promedio regional. El valor exacto del parámetro para pedir ERA5 está [Por verificar, Fase 1]; la página lo sugiere como `era5`.
-- **Estado:** provisional, hasta comprobar en la Fase 1 que se reciben datos completos para Medellín.
+- **Consecuencias y limitaciones:** la resolución es de 0,25° (~25 km), la serie es horaria y hay un retraso de 5 días [Verificado: misma fuente]. Una celda de 25 km no resuelve el valle de Aburrá: es un promedio regional. El parámetro es `models=era5` [Verificado: petición real, 2026-10-18]; la respuesta se ajusta a la celda (6,25, −75,5) y llega un año completo. Los últimos 2–3 meses son la versión preliminar ERA5T y se tratan como definitivos.
+- **Estado:** definitiva (Fase 1).
 
 ## D-006 — Calidad del aire: PM2.5 de CAMS global vía Open-Meteo
 
@@ -94,20 +94,20 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
   - **Es un modelo, no una medición.** El historial que ofrece la API son pronósticos archivados [Verificado: misma fuente: «access archived forecasts»].
   - La resolución es de 0,4° (~45 km) y el paso de 3 horas, con datos disponibles desde agosto de 2022 [Verificado: misma fuente].
   - Unidad: µg/m³; valor instantáneo a 10 m sobre el suelo [Verificado: misma fuente].
-- **Motivo de revisión:** el paso nativo es de **3 horas**, pero el resto del diseño supone datos horarios (franjas con «2 de 3 horas», cobertura ≥ 98 % horaria, regresión horaria). Hay que comprobar en la Fase 1 si la API devuelve valores horarios interpolados o valores cada 3 horas con `null` en medio [Por verificar, Fase 1].
-  - Si interpola, las horas intermedias no son información nueva: inflan artificialmente el tamaño de la muestra y la autocorrelación.
-  - Si deja `null`, ninguna franja de PM2.5 alcanzaría 2 de 3 horas y la cobertura horaria sería de un 33 %.
-
-  Las consecuencias de cada caso se tratan en [cobertura-y-franjas.md](cobertura-y-franjas.md#interacción-con-el-paso-de-3-horas-de-pm25) y [regresion.md](regresion.md#conjunto-de-datos).
-- **Estado:** **pendiente de revisión** (Fase 1). La fuente no cambia; lo que debe revisarse es cómo se trata su resolución temporal.
+- **Resolución de la revisión (Fase 1):** la documentación indica un paso nativo de 3 horas, pero la API devuelve **24 valores horarios al día, sin nulos**, y las horas intermedias no son una interpolación simple [Verificado: `samples/cams_pm25_year.json`]. Por tanto:
+  - La cobertura de PM2.5 se mide con pasos esperados horarios, igual que ERA5 (DP-03).
+  - Las franjas usan la misma regla que las demás variables (DP-01).
+  - La regresión usa todas las horas (DP-02).
+  - El archivo empalma pronósticos a las 00 y 12 UTC, con saltos medios de 7,4 y 5,6 µg/m³ frente a 1,3 en el resto de horas. Los empalmes se documentan y se muestran en una gráfica, pero **no se corrigen** ([fuentes-y-datos.md](fuentes-y-datos.md#empalmes-de-las-ejecuciones-del-pronóstico-00-y-12-utc)).
+- **Estado:** definitiva.
 
 ## D-007 — Un único punto representativo de Medellín
 
 - **Contexto:** las APIs devuelven series para una coordenada y la resolución de los modelos (25–45 km) es mayor que la ciudad.
 - **Opciones consideradas:** (a) un punto en el centro; (b) varios puntos promediados; (c) varios puntos tratados como ubicaciones distintas.
-- **Decisión:** (a). Las coordenadas exactas y la elevación que se fijará están [Por verificar, Fase 1]. La elevación importa porque Open-Meteo la usa para el reescalado estadístico (*downscaling*): por defecto toma un modelo digital de elevación de 90 m [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)].
-- **Consecuencias y limitaciones:** con celdas de 25–45 km, varios puntos de Medellín caerían probablemente en la misma celda, así que más puntos no aportarían información real [Supuesto]. El modelo de datos (entidad Location) permite añadir ubicaciones más adelante.
-- **Estado:** provisional.
+- **Decisión:** (a): ubicación `MED-CENTRO` («Medellín – Centro»), latitud 6,2447, longitud −75,5748, elevación fija de **1 495 m** (altitud oficial) y zona horaria America/Bogota. La elevación se envía como `elevation=1495` a la API de ERA5; la Air Quality API no documenta ese parámetro y no se envía. La elevación importa porque Open-Meteo la usa para el reescalado estadístico (*downscaling*): por defecto toma un modelo digital de elevación de 90 m [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)].
+- **Consecuencias y limitaciones:** con celdas de 25–45 km, varios puntos de Medellín caerían probablemente en la misma celda, así que más puntos no aportarían información real [Supuesto]. El modelo de datos (entidad Location) permite añadir ubicaciones más adelante. El valor fijo se prefiere al automático (1 493 m) porque es explícito, reproducible y queda guardado en la base.
+- **Estado:** definitiva (Fase 1).
 
 ## D-008 — Almacenar en UTC, calcular en America/Bogota
 
@@ -123,8 +123,8 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Opciones consideradas:** (a) el valor de la hora puntual; (b) el promedio de una ventana de 3 horas con un mínimo de horas válidas; (c) el promedio sin mínimo; (d) interpolar los huecos.
 - **Decisión:** (b), con las ventanas 7–9 h, 13–15 h y 19–21 h dentro del mismo día civil local. Cada franja necesita al menos 2 de sus 3 horas; si no las tiene, su valor es NaN. No se interpola.
 - **Consecuencias y limitaciones:** el promedio es más robusto que una hora suelta, pero suaviza los picos.
-- **Motivo de revisión:** ver D-006. Si PM2.5 llega cada 3 horas, sus pasos nativos en hora local serían las 7, 13 y 19 h [Supuesto: pasos en 00, 03, …, 21 UTC, por verificar en la Fase 1]. Cada ventana contendría así exactamente un dato real de PM2.5: o la regla de 2 de 3 horas no se cumple nunca, o se cumple con valores interpolados por la API, lo que contradice la regla de «no interpolar». Hay que decidir si la regla se aplica por variable según su paso nativo.
-- **Estado:** **pendiente de revisión** (Fases 1 y 6).
+- **Resolución de la revisión (Fase 1):** PM2.5 llega con 24 valores horarios (ver D-006), así que la regla de 2 de 3 horas se aplica **igual a las 4 variables** (DP-01). Advertencia: las franjas de la mañana (07–09) y de la noche (19–21) empiezan en un empalme del pronóstico de CAMS (12 y 00 UTC); se documenta en [cobertura-y-franjas.md](cobertura-y-franjas.md#pm25-horario-y-empalmes-del-pronóstico).
+- **Estado:** definitiva.
 
 ## D-010 — Cuatro entidades en ObjectDB
 
@@ -154,9 +154,9 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 
 - **Contexto:** se quiere saber siempre de dónde viene cada valor y que una descarga nueva no borre una anterior por accidente.
 - **Opciones consideradas:** (a) solo inserciones y saltar los duplicados; (b) *upsert* (insertar o sobrescribir); (c) borrar y recargar el periodo.
-- **Decisión:** (a). Un registro existente solo puede cambiar mediante un IngestionBatch marcado como corrección.
-- **Consecuencias y limitaciones:** si la fuente revisa datos recientes (posible en ERA5 [Por verificar, Fase 1]), la base conservará la primera versión salvo que se haga una corrección. Falta definir el mecanismo de corrección (¿se sobrescribe el valor y se apunta al nuevo lote?, ¿se guarda el valor anterior?) [decisión pendiente DP-04, Fase 2].
-- **Estado:** provisional.
+- **Decisión:** (a), **sin mecanismo de corrección** (DP-04): un registro existente nunca cambia y `IngestionBatch.type` vale siempre `NORMAL`. Los lotes de tipo `CORRECCION` quedan como posible extensión futura, fuera del alcance.
+- **Consecuencias y limitaciones:** si la fuente revisa datos recientes (posible en ERA5T), la base conserva la primera versión, coherente con tratar ERA5T como definitivo. Un solo camino de escritura: transacciones, clave natural, idempotencia y procedencia, sin rutas de actualización.
+- **Estado:** definitiva.
 
 ## D-014 — Criterio de cobertura: 98 % y hueco máximo de 6 h
 
@@ -171,13 +171,13 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Contexto:** el límite gratuito de Open-Meteo es de 10 000 llamadas al día, y las peticiones de más de 2 semanas o de más de 10 variables cuentan como varias llamadas [Verificado: [Open-Meteo – precios](https://open-meteo.com/en/pricing)].
 - **Opciones consideradas:** (a) pedir solo los intervalos faltantes; (b) descargar el año entero cada vez.
 - **Decisión:** (a). Además, no se piden fechas que la fuente todavía no publica: ERA5 llega con 5 días de retraso [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)]. En PM2.5 la API también devuelve pronósticos futuros, que nunca se guardan [Recomendación].
-- **Consecuencias y limitaciones:** hace falta calcular los faltantes (Fase 5). Un intervalo cuya fuente no tiene datos se volverá a pedir en cada actualización; conviene registrarlo en IngestionBatch para no insistir indefinidamente [Recomendación].
+- **Consecuencias y limitaciones:** hace falta calcular los faltantes (Fase 5). Un intervalo cuya fuente no tiene datos se volverá a pedir en cada actualización; conviene registrarlo en IngestionBatch para no insistir indefinidamente [Recomendación]. Las filas con todas las variables a `null` no se guardan nunca (DP-12): así siguen contando como faltantes y se vuelven a pedir en la siguiente actualización. Las horas de ERA5 aún no publicadas, que la API devuelve como `null`, se descartan por la misma regla y por el recorte en el fin efectivo.
 - **Estado:** definitiva.
 
 ## D-016 — Ventana móvil de un año
 
 - **Contexto:** el periodo de análisis se mueve con la fecha actual.
-- **Decisión:** la ventana va de la fecha actual menos un año a la fecha actual, recortada por la latencia de cada fuente. El cálculo y el caso del 29 de febrero están en [cobertura-y-franjas.md](cobertura-y-franjas.md#ventana-móvil).
+- **Decisión:** la ventana va de la fecha actual menos un año a la fecha actual, recortada por la latencia de cada fuente: el fin efectivo de ERA5 es las 00:00 UTC de D−4 (el día D−5 es el último completo) y el de CAMS es el fin de la ventana. El 29 de febrero se sustituye por el 28 de febrero del año anterior (DP-09). El cálculo y el caso del 29 de febrero están en [cobertura-y-franjas.md](cobertura-y-franjas.md#ventana-móvil).
 - **Consecuencias y limitaciones:** los resultados de dos ejecuciones en fechas distintas no son comparables directamente. Los datos que salen de la ventana no se borran (D-013); simplemente no se analizan.
 - **Estado:** definitiva.
 
@@ -192,9 +192,9 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 ## D-018 — Split temporal 9 + 3 meses con hueco de 24 h
 
 - **Contexto:** los datos horarios están autocorrelacionados; un *split* aleatorio mezclaría horas vecinas entre entrenamiento y prueba.
-- **Decisión:** los primeros ~9 meses se usan para entrenar y los últimos ~3 para probar, con 24 h descartadas entre ambos.
+- **Decisión:** entrenamiento = [inicio de la ventana, inicio + 9 meses naturales); después se descartan 24 h; prueba = el resto de la ventana. Las fechas exactas se imprimen con los resultados. El perfil diurno se calcula solo con el entrenamiento.
 - **Consecuencias y limitaciones:** la prueba cubre una sola época del año, distinta de la del entrenamiento, así que las métricas dependen de la estacionalidad. Ver [regresion.md](regresion.md#separación-temporal-con-hueco).
-- **Estado:** provisional (las proporciones exactas se fijan en la Fase 7).
+- **Estado:** definitiva.
 
 ## D-019 — Pipeline con escalador ajustado solo con entrenamiento
 
@@ -219,18 +219,18 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 ## D-022 — Unidades canónicas
 
 - **Contexto:** Open-Meteo devuelve por defecto la temperatura en °C, la humedad en % y el viento en km/h, y permite pedir el viento en m/s con `wind_speed_unit=ms` [Verificado: [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)]. PM2.5 llega en µg/m³ [Verificado: [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api)].
-- **Decisión:** guardar en °C, %, m/s y µg/m³, e incluir la unidad en el nombre del campo [Recomendación].
+- **Decisión:** guardar en °C, %, m/s y µg/m³, e incluir la unidad en el nombre del campo. El viento se pide directamente en m/s con `wind_speed_unit=ms` (DP-06), así que no hay conversión.
 - **Consecuencias y limitaciones:** las unidades del SI facilitan comparar con la literatura; los coeficientes de la regresión se interpretan en esas unidades.
-- **Estado:** provisional (Fase 3).
+- **Estado:** definitiva.
 
 ## D-023 — Visualizaciones con Matplotlib, en ventana o PNG
 
-- **Decisión:** generar las gráficas con Matplotlib; mostrarlas en una ventana o guardarlas como PNG según elija el usuario. Ver [cli-y-visualizaciones.md](cli-y-visualizaciones.md).
-- **Estado:** provisional (Fase 8).
+- **Decisión:** generar las gráficas con Matplotlib. La aplicación pregunta cada vez si mostrarlas en una ventana o guardarlas como PNG (`outputs/<gráfica>_<AAAAmmdd-HHMMSS>.png`); si no hay pantalla disponible, guarda el PNG automáticamente y lo avisa (DP-10). Cada gráfica lleva título, unidades, periodo y «Datos: Open-Meteo.com (ERA5, CAMS)». Ver [cli-y-visualizaciones.md](cli-y-visualizaciones.md).
+- **Estado:** definitiva.
 
 ## Limitaciones y supuestos
 
 - Las decisiones D-001 a D-021 vienen del encargo inicial y no se volvieron a investigar. Solo se comprobaron contra la documentación oficial las afirmaciones marcadas como [Verificado].
-- Dos decisiones (D-006 y D-009) quedan **pendientes de revisión** por la diferencia entre el paso de 3 horas de PM2.5 y el diseño horario. Ninguna se cambió; la duda se resuelve en la Fase 1.
+- D-006 y D-009 estuvieron pendientes de revisión por el paso de 3 horas de PM2.5; la Fase 1 mostró que la API entrega valores horarios y ambas quedaron definitivas sin cambiar la fuente ni las franjas.
 - Los enlaces de verificación se consultaron el 2026-10-09. La documentación de Open-Meteo y de ObjectDB puede cambiar.
-- La lista consolidada de decisiones pendientes (DP-xx) y su fase está en [fases.md](fases.md#decisiones-pendientes).
+- La lista de decisiones DP-xx, todas resueltas el 2026-10-18, está en [fases.md](fases.md#decisiones-pendientes). D-010, D-011 (implementación) y D-014 se confirman en las fases 2 y 5.

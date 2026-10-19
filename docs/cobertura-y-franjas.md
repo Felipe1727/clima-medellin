@@ -15,8 +15,9 @@ El proyecto analiza siempre **el último año**. Si hoy es 9 de octubre de 2026,
 3. **Fin** = D a las 00:00 locales (exclusivo). El día de hoy no se incluye porque todavía está incompleto.
 4. Ambos extremos se convierten a UTC: las 00:00 locales son las 05:00 UTC.
 5. **Fin efectivo por fuente** = el mínimo entre el fin y el último dato publicado:
-   - ERA5: unos 5 días antes de D [Verificado: retraso de 5 días, [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api)]. El corte exacto (si incluye o no el día D−5 completo) está [Por verificar, Fase 1].
-   - CAMS: la última hora pasada. La API devuelve también horas futuras (pronóstico) que **no se guardan**.
+   - ERA5: **las 00:00 UTC de D−4** (exclusivo): el día D−5 llega completo [Verificado: petición real del 2026-10-18; con D = 2026-10-18 el último valor fue el de 2026-10-13 23:00 UTC]. La API devuelve los días posteriores como horas con todas las variables a `null`; la ingesta las descarta antes de guardar.
+   - CAMS: el fin de la ventana. La API devuelve también horas futuras (pronóstico) que **no se guardan**.
+   - Nada en el fin efectivo o después de él se guarda nunca.
 
 ### Caso del 29 de febrero
 
@@ -37,7 +38,7 @@ Consecuencia: la ventana no tiene siempre 365 días. Tiene 366 cuando incluye un
 
 | Métrica | Definición | Ejemplo |
 |---|---|---|
-| Pasos esperados | Timestamps que deberían existir entre el inicio y el fin efectivo, según el paso nativo de la fuente | 1 h en ERA5: 360 días × 24 = 8 640 |
+| Pasos esperados | Timestamps que deberían existir entre el inicio y el fin efectivo, con paso horario en las dos fuentes (DP-03) | 1 h en ERA5: 360 días × 24 = 8 640 |
 | Pasos válidos | Timestamps con un valor no nulo de esa variable | 8 600 |
 | Cobertura | válidos / esperados × 100 | 8 600 / 8 640 = 99,5 % |
 | Hueco máximo | Duración del tramo consecutivo de faltantes más largo, en horas | 5 h |
@@ -60,16 +61,9 @@ La cobertura se mide **por variable** y no por registro: un WeatherRecord puede 
 
 Los dos criterios se complementan: un 99 % de cobertura con un único hueco de 80 horas seguidas (más de 3 días) sería «casi completo» por porcentaje, pero inservible para analizar esos días.
 
-### Interacción con el paso de 3 horas de PM2.5
+### PM2.5: pasos esperados horarios
 
-El dominio global de CAMS tiene un paso nativo de 3 horas [Verificado: [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api)]. Cómo devuelve la API esos datos está **[Por verificar, Fase 1]**, y cada posibilidad tiene consecuencias distintas:
-
-| Si la API devuelve… | Cobertura horaria de PM2.5 | Qué hacer [Recomendación] |
-|---|---|---|
-| 24 valores/día (interpolados) | ~100 %, pero 2 de cada 3 valores no son información nueva | Medir la cobertura sobre los pasos nativos y marcar los interpolados (DP-03) |
-| 8 valores/día con `null` en medio | ~33 %: siempre PARCIAL con la regla horaria | Definir los «pasos esperados» de PM2.5 con un paso de 3 h; así la cobertura vuelve a tener sentido |
-
-En ambos casos, la solución coherente es que **cada fuente tenga su propio paso esperado** en el cálculo de cobertura. Por eso D-006 y D-014 quedan como pendiente de revisión y provisional, respectivamente.
+La documentación del dominio global de CAMS indica un paso nativo de 3 horas, pero la API devuelve **24 valores horarios al día, sin nulos**, que no son una interpolación simple [Verificado: `samples/cams_pm25_year.json`, Fase 1]. Por eso **PM2.5 usa pasos esperados horarios, igual que ERA5** (DP-03): con un año completo, su cobertura es del 100 % y los umbrales de D-014 se aplican sin cambios.
 
 ## Cálculo de faltantes e intervalos
 
@@ -103,7 +97,7 @@ ENTRADA: ubicación, fuente, paso_nativo, fecha_hoy_local, latencia_fuente
 
 **Ejemplo pequeño.** Con ERA5, faltan las horas del 3 de marzo de 13:00 a 18:00 UTC y todo el 10 de marzo. El paso 5 produce dos intervalos. El paso 6 los convierte en «3 de marzo» y «10 de marzo». Se hacen dos peticiones de un día cada una. Las horas del 3 de marzo que ya existían llegarán otra vez, pero la clave natural las detecta como duplicadas y no se tocan (D-011, D-013).
 
-Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen registro. Un registro con todas sus variables a `null` **existe**, así que no se volverá a pedir. Si eso es deseable o si hay que volver a pedir esos valores se decide en la Fase 5 (DP-12) [Recomendación: no volver a pedirlos automáticamente; mostrarlos como hueco en la cobertura].
+Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen registro. **Nunca se guarda una fila con todas sus variables a `null`** (DP-12): Python la descarta antes de entregar el lote a Java. Así, «existe un registro» significa «hay al menos un valor real», y una hora sin ningún dato sigue contando como faltante y se vuelve a pedir en la siguiente actualización, lo cual es barato. Las filas con solo algunas variables a `null` sí se guardan, con esos valores a `null` (D-012).
 
 ## Política de actualización incremental y de escritura
 
@@ -111,7 +105,7 @@ Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen r
 2. **Solo lo publicado.** No se piden fechas posteriores al fin efectivo de la fuente.
 3. **Nunca el pronóstico.** De las respuestas de PM2.5 se descartan los timestamps posteriores a la hora actual.
 4. **Solo inserciones.** Si un timestamp ya existe, se omite y se cuenta como duplicado. No se sobrescribe (D-013).
-5. **Correcciones explícitas.** Un cambio de un valor existente solo es posible mediante un IngestionBatch de tipo CORRECCION, cuyo mecanismo se define en la Fase 2 (DP-04).
+5. **Sin correcciones.** Un valor guardado no cambia nunca; el proyecto no implementa lotes de corrección (DP-04). Los datos recientes de ERA5 (ERA5T) se tratan como definitivos.
 6. **Nada se borra por salir de la ventana.** Los datos de hace 13 meses siguen en la base; el análisis simplemente filtra por la ventana actual. A ~17 500 entidades por año, el límite gratuito de un millón tardaría décadas en alcanzarse [Supuesto: cálculo propio].
 7. **Intentos vacíos.** Si la API no devuelve datos para un intervalo, se registra un IngestionBatch con 0 insertados. Así se sabe que el hueco es de la fuente y no un fallo del proceso [Recomendación].
 
@@ -142,13 +136,19 @@ Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen r
 
 Ejemplo: el 12 de abril, la temperatura a las 07:00 es 17,8 °C, a las 08:00 falta y a las 09:00 es 19,6 °C. Hay 2 de 3 valores, así que la franja de la mañana vale 18,7 °C. Si también faltara el de las 09:00, valdría NaN.
 
-**Pendiente de revisión (D-009):** si PM2.5 llega cada 3 horas, sus pasos nativos en hora local serían 19, 22, 1, 4, **7**, 10, **13** y 16 [Supuesto: pasos en 00, 03, …, 21 UTC; por verificar en la Fase 1]. Cada ventana (7–9, 13–15, 19–21) contiene **exactamente un** valor nativo, en su primera hora. Opciones a decidir en la Fase 6 (DP-01):
+### PM2.5 horario y empalmes del pronóstico
 
-1. Para PM2.5, que la franja sea ese único valor nativo (mínimo de 1 de 1).
-2. Desplazar las ventanas para centrarlas en los pasos nativos (6–8, 12–14, 18–20).
-3. Aceptar los valores interpolados de la API, si existen, documentando que contradicen «no interpolar».
+Como PM2.5 llega con valores horarios (ver [PM2.5: pasos esperados horarios](#pm25-pasos-esperados-horarios)), **la regla de franjas es la misma para las 4 variables** (DP-01): promedio de los valores no nulos de las 3 horas y NaN si hay menos de 2.
 
-[Recomendación preliminar] La opción 1, que mantiene las mismas ventanas para las cuatro variables y no introduce valores inventados.
+**Advertencia sobre los empalmes.** El archivo de CAMS encadena pronósticos que empiezan a las 00 y a las 12 UTC, y en esas horas el valor salta mucho más que en el resto (salto medio de 7,4 y 5,6 µg/m³ frente a 1,3; ver [fuentes-y-datos.md](fuentes-y-datos.md#empalmes-de-las-ejecuciones-del-pronóstico-00-y-12-utc)). En hora local:
+
+| Franja | Ventana local | Ventana UTC | Empalme |
+|---|---|---|---|
+| Mañana | 07–09 | 12–14 | **Empieza en el empalme de 12 UTC** |
+| Tarde | 13–15 | 18–20 | Ninguno |
+| Noche | 19–21 | 00–02 (día siguiente) | **Empieza en el empalme de 00 UTC** |
+
+Una diferencia de PM2.5 entre la mañana o la noche y la tarde puede deberse en parte a dónde se empalman los pronósticos y no a la calidad del aire. Los empalmes **no se corrigen** (no se suaviza ni se eliminan horas): se documentan y se muestran en una gráfica de diagnóstico, y deben tenerse en cuenta al interpretar las franjas de PM2.5.
 
 ### Comparación: hora puntual frente a promedio por franja
 
@@ -158,9 +158,9 @@ Ejemplo: el 12 de abril, la temperatura a las 07:00 es 17,8 °C, a las 08:00 fal
 | Sensibilidad a un faltante | Un faltante → NaN | Tolera un faltante |
 | Ruido | Mayor | Menor (promedia 3 valores) |
 | Picos | Los conserva, si coinciden con la hora | Los suaviza |
-| Desalineación con pasos de 3 h (PM2.5) | Puede caer siempre en un paso no nativo (las 8:00 locales no son paso nativo) | Contiene un paso nativo |
+| Empalmes del pronóstico de CAMS (PM2.5) | Las 07:00 y 19:00 locales caen justo en un empalme | El empalme pesa un tercio del promedio |
 
-**Recomendación:** promedio por franja para la meteorología (más robusto y tolerante a faltantes) y, para PM2.5, el tratamiento que se decida en DP-01.
+**Decisión:** promedio por franja para las 4 variables (más robusto y tolerante a faltantes), con la advertencia de los empalmes para PM2.5 (DP-01).
 
 ## Perfil diurno
 
@@ -173,6 +173,6 @@ El perfil diurno es la media de cada variable para cada hora local (0–23). Sir
 
 - Los umbrales del 98 % y de 6 h, la regla de 2 de 3 horas y las horas de las franjas son decisiones de diseño, no criterios estándar.
 - La regla del 29 de febrero es una convención propuesta.
-- El tratamiento de PM2.5 depende de un punto [Por verificar] crítico de la Fase 1 (paso real de la respuesta).
-- Se supone que los timestamps de la API corresponden al inicio de la hora (instantáneos); si alguna variable fuera un agregado de la hora anterior, las franjas se desplazarían una hora [Por verificar, Fase 1].
+- PM2.5 se trata como horario porque así lo entrega la API (Fase 1); sus empalmes de 00 y 12 UTC afectan a las franjas de la mañana y de la noche.
+- Las cuatro variables son valores instantáneos a la hora indicada [Verificado: documentación de Open-Meteo, Fase 1], así que las franjas no se desplazan.
 - Las franjas en hora local no tienen en cuenta que el amanecer y el atardecer cambian algo a lo largo del año; en Medellín, cerca del ecuador, esa variación es pequeña [Supuesto].

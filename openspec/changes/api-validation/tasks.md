@@ -8,9 +8,9 @@
 
 ## 2. Documentación de la Fase 1
 
-- [ ] 2.1 Calcular la magnitud de los empalmes de PM2.5 sobre la muestra anual y actualizar `docs/fuentes-y-datos.md` (hallazgos de la Fase 1, línea de ERA5T, atribución de CAMS global, PV-01…PV-12 resueltos o justificados); verificar que no quedan `[Por verificar, Fase 1]` sin resolver
-- [ ] 2.2 Actualizar `docs/decisiones.md` (D-005, D-006, D-007, D-009, D-013, D-018, D-022, D-023 con el texto y estado finales) y verificar que D-006 y D-009 ya no están en "pendiente de revisión"
-- [ ] 2.3 Actualizar `docs/fases.md` (Fase 1 completada, DP-01…DP-12 resueltas, PV-01…PV-12 resueltos) y `docs/cobertura-y-franjas.md` (PM2.5 horario, misma regla de franjas, aviso de empalmes, regla de DP-12, ventana efectiva de ERA5); verificar que las tablas reflejan las decisiones del roadmap
+- [x] 2.1 Calcular la magnitud de los empalmes de PM2.5 sobre la muestra anual y actualizar `docs/fuentes-y-datos.md` (hallazgos de la Fase 1, línea de ERA5T, atribución de CAMS global, PV-01…PV-12 resueltos o justificados); verificar que no quedan `[Por verificar, Fase 1]` sin resolver
+- [x] 2.2 Actualizar `docs/decisiones.md` (D-005, D-006, D-007, D-009, D-013, D-018, D-022, D-023 con el texto y estado finales) y verificar que D-006 y D-009 ya no están en "pendiente de revisión"
+- [x] 2.3 Actualizar `docs/fases.md` (Fase 1 completada, DP-01…DP-12 resueltas, PV-01…PV-12 resueltos) y `docs/cobertura-y-franjas.md` (PM2.5 horario, misma regla de franjas, aviso de empalmes, regla de DP-12, ventana efectiva de ERA5); verificar que las tablas reflejan las decisiones del roadmap
 - [ ] 2.4 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

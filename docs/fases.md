@@ -9,7 +9,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | Fase | Nombre | Estado | Depende de |
 |---|---|---|---|
 | 0 | Documentación y diseño | [x] | — |
-| 1 | Validación de las APIs | [ ] | 0 |
+| 1 | Validación de las APIs | [x] | 0 |
 | 2 | Modelo de datos y persistencia en ObjectDB | [ ] | 0 |
 | 3 | Ingesta y normalización en Python | [ ] | 1 |
 | 4 | Puente Java↔Python | [ ] | 2, 3 |
@@ -56,10 +56,10 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** confirmar con peticiones reales que Open-Meteo entrega lo que suponemos para Medellín, antes de construir nada encima. Solo exploración: peticiones manuales (navegador o herramienta HTTP) y respuestas guardadas en `samples/`, **sin código de producción**.
 
 **Entregables:**
-- [ ] Coordenadas y elevación del punto representativo elegidas y justificadas (PV-01, PV-02).
-- [ ] Respuestas de muestra guardadas en `samples/`: ERA5 para un año y para un mes reciente; PM2.5 para un año y para la última semana.
-- [ ] Una nota de hallazgos, en la que se actualiza [fuentes-y-datos.md](fuentes-y-datos.md): paso real de PM2.5, latencia observada, unidades, nulos, convención del timestamp y atribución.
-- [ ] D-005, D-006 y D-009 actualizadas en [decisiones.md](decisiones.md).
+- [x] Coordenadas y elevación del punto representativo elegidas y justificadas (PV-01, PV-02): `MED-CENTRO`, 6,2447, −75,5748, 1 495 m.
+- [x] Respuestas de muestra guardadas en [`samples/`](../samples/README.md): ERA5 para un año y para un mes reciente; PM2.5 para un año y para la última semana. Las descarga `python/scripts/fetch_samples.py` y las verifica `python/tests/test_samples.py`.
+- [x] Una nota de hallazgos, en la que se actualiza [fuentes-y-datos.md](fuentes-y-datos.md#hallazgos-de-la-fase-1): paso real de PM2.5, latencia observada, unidades, nulos, convención del timestamp, empalmes de 00 y 12 UTC y atribución.
+- [x] D-005, D-006 y D-009 actualizadas en [decisiones.md](decisiones.md), junto con el resto de decisiones cerradas el 2026-10-18.
 
 **Conceptos que se estudiarán:**
 - *Parámetros de una API REST*: cómo se expresa una consulta en la URL.
@@ -75,9 +75,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 0.
 
-**Decisiones abiertas:** DP-01 (franjas y PM2.5, se prepara aquí), DP-02 (resolución de PM2.5 en la regresión, se prepara aquí), DP-11 (ubicación).
+**Decisiones abiertas:** DP-01, DP-02 y DP-11, resueltas el 2026-10-18 (ver la [tabla final](#decisiones-pendientes)).
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada (las peticiones se hicieron durante la exploración del 2026-10-18 y las muestras con el script del proyecto).
 
 ---
 
@@ -301,48 +301,50 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 ## Decisiones pendientes
 
-| ID | Decisión | Relacionada con | Opciones / propuesta | Se resuelve en | ¿Requiere opinión del estudiante? |
-|---|---|---|---|---|---|
-| DP-01 | Tratamiento de PM2.5 en las franjas (paso de 3 h) | D-006, D-009 | (1) un valor nativo por franja [recomendada]; (2) desplazar las ventanas; (3) aceptar valores interpolados | Fase 6 (con datos de la Fase 1) | Sí |
-| DP-02 | Resolución de PM2.5 en la regresión | D-006, D-017 | Solo los pasos nativos [recomendada] o todas las horas devueltas | Fase 7 (con datos de la Fase 1) | Sí |
-| DP-03 | Umbral de cobertura de PM2.5 según su paso | D-014 | Pasos esperados de 3 h para PM2.5 [recomendada] | Fase 5 | No |
-| DP-04 | Mecanismo del lote de corrección | D-013 | Sobrescribir el valor y apuntar al lote nuevo, guardando el valor anterior en el lote; o no implementar correcciones en este proyecto | Fase 2 | Sí |
-| DP-05 | Tabla definitiva de códigos de salida | D-003, D-004 | Propuesta 0–4 de [arquitectura.md](arquitectura.md#códigos-de-salida-propuesta) | Fase 4 | No |
-| DP-06 | Unidad canónica del viento | D-022 | m/s [recomendada] o km/h | Fase 3 | No |
-| DP-07 | Versión de Java y variante de ObjectDB | D-002 | `javax` (Java ≥ 8) o `jakarta` (Java ≥ 17) | Fase 2 | Sí (depende de lo instalado y de lo que use la asignatura) |
-| DP-08 | Transformación logarítmica de PM2.5 | D-017 | Escala original [recomendada] o log | Fase 7 | Sí |
-| DP-09 | Regla del 29 de febrero | D-016 | Usar el 28 de febrero del año anterior [recomendada] | Fase 5 | No |
-| DP-10 | Salida de las gráficas por defecto | D-023 | Preguntar cada vez; PNG si no hay pantalla | Fase 8 | Sí |
-| DP-11 | Coordenadas y elevación del punto | D-007 | Un punto del centro de Medellín, con elevación fija o automática | Fase 1 | Sí |
-| DP-12 | Volver a pedir registros existentes con todo a null | D-015 | No volver a pedirlos automáticamente [recomendada] | Fase 5 | No |
+Todas se resolvieron en la sesión de exploración del 2026-10-18, con los resultados de la Fase 1. El detalle está en [decisiones.md](decisiones.md) y en [openspec/roadmap.md](../openspec/roadmap.md).
+
+| ID | Decisión | Relacionada con | Resolución | Estado |
+|---|---|---|---|---|
+| DP-01 | Tratamiento de PM2.5 en las franjas | D-006, D-009 | PM2.5 es horario: misma regla de franjas que las demás variables (7–9, 13–15, 19–21 h, mínimo 2 de 3) | Resuelta |
+| DP-02 | Resolución de PM2.5 en la regresión | D-006, D-017 | Todas las horas devueltas por la API | Resuelta |
+| DP-03 | Umbral de cobertura de PM2.5 según su paso | D-014 | Pasos esperados horarios, igual que ERA5 | Resuelta |
+| DP-04 | Mecanismo del lote de corrección | D-013 | No se implementan correcciones: solo inserciones, tipo de lote siempre `NORMAL` | Resuelta |
+| DP-05 | Tabla definitiva de códigos de salida | D-003, D-004 | 0 éxito, 1 uso, 2 datos, 3 base de datos, 4 inesperado | Resuelta |
+| DP-06 | Unidad canónica del viento | D-022 | m/s, pedido directamente con `wind_speed_unit=ms` | Resuelta |
+| DP-07 | Versión de Java y variante de ObjectDB | D-002 | Java 25, Maven, `objectdb-jk` 2.9.5 (jakarta), JAR único con maven-shade | Resuelta |
+| DP-08 | Transformación logarítmica de PM2.5 | D-017 | Escala original; la asimetría se muestra en el histograma y los residuos | Resuelta |
+| DP-09 | Regla del 29 de febrero | D-016 | El 28 de febrero del año anterior | Resuelta |
+| DP-10 | Salida de las gráficas por defecto | D-023 | Preguntar cada vez (ventana o PNG); PNG automático con aviso si no hay pantalla | Resuelta |
+| DP-11 | Coordenadas y elevación del punto | D-007 | `MED-CENTRO`, 6,2447, −75,5748, elevación fija de 1 495 m | Resuelta |
+| DP-12 | Registros existentes con todo a null | D-015 | No se guardan nunca filas con todas las variables a null: siguen como faltantes y se vuelven a pedir | Resuelta |
 
 ## Puntos por verificar
 
-| ID | Punto | Documento de origen | Se verifica en |
-|---|---|---|---|
-| PV-01 | Coordenadas del punto representativo del centro de Medellín | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-02 | Elevación que se fijará y su efecto en el reescalado | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-03 | Nombre y valor exactos del parámetro para seleccionar ERA5 | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-04 | Corte real de la latencia de ERA5 (¿día D−5 completo?) | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 1 |
-| PV-05 | **Paso real de PM2.5 en la respuesta (horario interpolado o cada 3 h con null)** | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-06 | Un año completo de PM2.5 y de ERA5 disponible para Medellín | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-07 | Revisiones de ERA5 reciente y cambios de versión de CAMS dentro del año | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-08 | Convención del timestamp (instantáneo o agregado de la hora anterior) | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 1 |
-| PV-09 | Representación de los ausentes en las respuestas (`null`) | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-10 | Rango máximo de fechas por petición | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-11 | Texto de atribución exigido para CAMS global | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 |
-| PV-12 | Si CAMS usa meteorología del ECMWF (IFS) como entrada | [regresion.md](regresion.md) | Fase 1 |
-| PV-13 | Índice único compuesto que incluya una relación con Location | [arquitectura.md](arquitectura.md) | Fase 2 |
-| PV-14 | Tipo temporal de Java admitido por ObjectDB para timestamps UTC | [arquitectura.md](arquitectura.md) | Fase 2 |
-| PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 |
-| PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 |
-| PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 |
-| PV-18 | Comportamiento de Matplotlib sin entorno gráfico | [cli-y-visualizaciones.md](cli-y-visualizaciones.md) | Fase 8 |
-| PV-19 | Formato de `coverage` (lista de timestamps o intervalos) y argumentos de los subcomandos | [arquitectura.md](arquitectura.md) | Fase 4 |
+| ID | Punto | Documento de origen | Se verifica en | Estado |
+|---|---|---|---|---|
+| PV-01 | Coordenadas del punto representativo del centro de Medellín | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: 6,2447, −75,5748 |
+| PV-02 | Elevación que se fijará y su efecto en el reescalado | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: 1 495 m fijos |
+| PV-03 | Nombre y valor exactos del parámetro para seleccionar ERA5 | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: `models=era5` |
+| PV-04 | Corte real de la latencia de ERA5 (¿día D−5 completo?) | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 1 | Resuelto: D−5 completo |
+| PV-05 | **Paso real de PM2.5 en la respuesta (horario interpolado o cada 3 h con null)** | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: 24 valores horarios, sin nulos |
+| PV-06 | Un año completo de PM2.5 y de ERA5 disponible para Medellín | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: sí, para ambas fuentes |
+| PV-07 | Revisiones de ERA5 reciente y cambios de versión de CAMS dentro del año | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Justificado: ERA5T se trata como definitivo; las actualizaciones anuales de CAMS se documentan |
+| PV-08 | Convención del timestamp (instantáneo o agregado de la hora anterior) | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 1 | Resuelto: instantáneo |
+| PV-09 | Representación de los ausentes en las respuestas (`null`) | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: `null`; ERA5 devuelve los días no publicados como `null` |
+| PV-10 | Rango máximo de fechas por petición | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: no documentado; un año funciona en una petición |
+| PV-11 | Texto de atribución exigido para CAMS global | [fuentes-y-datos.md](fuentes-y-datos.md) | Fase 1 | Resuelto: texto adoptado en fuentes-y-datos.md |
+| PV-12 | Si CAMS usa meteorología del ECMWF (IFS) como entrada | [regresion.md](regresion.md) | Fase 1 | Resuelto: sí, CAMS se ejecuta con el IFS |
+| PV-13 | Índice único compuesto que incluya una relación con Location | [arquitectura.md](arquitectura.md) | Fase 2 | Pendiente |
+| PV-14 | Tipo temporal de Java admitido por ObjectDB para timestamps UTC | [arquitectura.md](arquitectura.md) | Fase 2 | Pendiente |
+| PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
+| PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 | Pendiente |
+| PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 | Pendiente |
+| PV-18 | Comportamiento de Matplotlib sin entorno gráfico | [cli-y-visualizaciones.md](cli-y-visualizaciones.md) | Fase 8 | Pendiente |
+| PV-19 | Formato de `coverage` (lista de timestamps o intervalos) y argumentos de los subcomandos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
 
 ## Limitaciones y supuestos
 
-- El orden de las fases supone que la Fase 1 no invalida la fuente de PM2.5. Si lo hiciera (por ejemplo, si no hubiera un año completo para Medellín), habría que replantear D-006 antes de la Fase 3.
+- La Fase 1 confirmó la fuente de PM2.5 (un año completo y horario para Medellín), así que el orden de las fases se mantiene.
 - Las fases no tienen fechas asignadas; el calendario depende de la asignatura.
 - Las casillas de los entregables de la Fase 0 reflejan la creación de los documentos, no su aprobación por el estudiante ni por el profesor.
 - Los identificadores DP-xx y PV-xx son propios de este documento; los demás documentos los citan cuando corresponde.

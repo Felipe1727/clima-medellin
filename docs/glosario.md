@@ -14,7 +14,7 @@ Definiciones breves de los términos que se usan en la documentación del proyec
 | **CAMS** (*Copernicus Atmosphere Monitoring Service*) | Servicio europeo de Copernicus que modela la composición atmosférica (aerosoles, gases). Produce los pronósticos de PM2.5 que entrega Open-Meteo. |
 | **PM2.5** (*particulate matter ≤ 2.5 µm*) | Partículas en suspensión de diámetro igual o menor a 2,5 micrómetros, medidas en µg/m³. Penetran en los pulmones y son un indicador clave de calidad del aire. **En este proyecto es un valor modelado por CAMS, no medido.** |
 | **Resolución espacial** (*spatial resolution*) | Tamaño de la celda de la malla del modelo. Con 25 km, todo lo que está dentro de la celda (montañas y valle) se resume en un solo valor. |
-| **Resolución temporal** (*temporal resolution*) | Intervalo entre dos valores consecutivos: 1 hora en ERA5 y 3 horas en el dominio global de CAMS. |
+| **Resolución temporal** (*temporal resolution*) | Intervalo entre dos valores consecutivos: 1 hora en ERA5. El dominio global de CAMS tiene un paso nominal de 3 horas, pero la API entrega valores horarios (Fase 1). |
 | **Capa de mezcla** (*mixing layer / boundary layer*) | Capa de aire cercana al suelo donde los contaminantes se mezclan. En la madrugada suele ser baja y estable, y atrapa las partículas en un valle como el de Aburrá; con el calentamiento del día crece y las dispersa. Es el mecanismo físico que explica la relación entre temperatura, viento y PM2.5, aunque no es una variable del modelo. |
 
 ## Tiempo y cobertura
