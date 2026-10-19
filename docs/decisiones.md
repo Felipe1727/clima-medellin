@@ -23,8 +23,8 @@ Este documento reúne las decisiones de diseño del proyecto en un formato liger
 | [D-007](#d-007--un-único-punto-representativo-de-medellín) | Un único punto representativo (`MED-CENTRO`, 1 495 m) | Definitiva | — |
 | [D-008](#d-008--almacenar-en-utc-calcular-en-americabogota) | UTC para almacenar; America/Bogota para calcular | Definitiva | — |
 | [D-009](#d-009--franjas-horarias-mañana-tarde-y-noche) | Franjas 7–9, 13–15 y 19–21 h, con un mínimo de 2 de 3 horas, para las 4 variables | Definitiva | — |
-| [D-010](#d-010--cuatro-entidades-en-objectdb) | Cuatro entidades en ObjectDB | Provisional | Fase 2 |
-| [D-011](#d-011--clave-natural-ubicación--fuente--timestamp-utc) | Clave natural: ubicación + fuente + timestamp UTC | Definitiva | Fase 2 (implementación) |
+| [D-010](#d-010--cuatro-entidades-en-objectdb) | Cuatro entidades en ObjectDB | Definitiva | — |
+| [D-011](#d-011--clave-natural-ubicación--fuente--timestamp-utc) | Clave natural: ubicación + fuente + timestamp UTC | Definitiva | — |
 | [D-012](#d-012--ausentes-como-null-nunca-como-0) | Ausentes como null, nunca 0 | Definitiva | — |
 | [D-013](#d-013--solo-inserciones-correcciones-mediante-lote-explícito) | Solo inserciones; sin correcciones | Definitiva | — |
 | [D-014](#d-014--criterio-de-cobertura-98--y-hueco-máximo-de-6-h) | Cobertura COMPLETA: ≥ 98 % y hueco ≤ 6 h | Provisional | Fase 5 |
@@ -132,15 +132,15 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Opciones consideradas:** (a) Location, WeatherRecord, AirQualityRecord e IngestionBatch; (b) una sola entidad «Observación» con todas las variables; (c) una entidad por variable.
 - **Decisión:** (a). Los campos y las relaciones están en [arquitectura.md](arquitectura.md#modelo-de-clases).
 - **Consecuencias y limitaciones:** las fuentes tienen pasos y latencias distintos; separarlas evita filas con la mitad de los campos vacíos y deja la procedencia clara. La versión gratuita de ObjectDB admite hasta 10 clases de entidad y un millón de entidades por archivo [Verificado: [ObjectDB – compra](https://www.objectdb.com/database/purchase)]. Un año son unas 8 760 + 8 760 filas como máximo, muy por debajo del límite.
-- **Estado:** provisional, hasta la prueba de la Fase 2.
+- **Estado:** definitiva (Fase 2: las cuatro entidades funcionan con las pruebas de `RecordStoreTest`).
 
 ## D-011 — Clave natural: ubicación + fuente + timestamp UTC
 
 - **Contexto:** hay que impedir que un mismo dato se guarde dos veces si se descarga de nuevo.
 - **Opciones consideradas:** (a) clave natural compuesta con una restricción de unicidad; (b) solo un identificador autogenerado, comprobando los duplicados en Python; (c) un hash de la fila.
-- **Decisión:** (a). ObjectDB admite índices únicos compuestos (`@Unique` o `@Index` con varios miembros) y lanza una `PersistenceException` al confirmar una transacción con duplicados [Verificado: [ObjectDB – índices](https://www.objectdb.com/java/jpa/entity/index)]. Si un índice único puede incluir una referencia a Location, o si conviene usar el código de la ubicación, está [Por verificar, Fase 2].
+- **Decisión:** (a). ObjectDB admite índices únicos compuestos (`@Unique` o `@Index` con varios miembros) y lanza una `PersistenceException` al confirmar una transacción con duplicados [Verificado: [ObjectDB – índices](https://www.objectdb.com/java/jpa/entity/index)]. El índice único admite la referencia a Location (`@Unique(members = {"location", "source", "timestampUtc"})`) [Verificado: Fase 2].
 - **Consecuencias y limitaciones:** la deduplicación ocurre en la base y no depende de que Python acierte. Un duplicado no debe abortar todo el lote; Java tiene que detectarlo y contarlo (ver D-013).
-- **Estado:** definitiva en el concepto; la implementación se valida en la Fase 2.
+- **Estado:** definitiva (implementación validada en la Fase 2: precarga de claves existentes, conteo de duplicados y bloques de 500).
 
 ## D-012 — Ausentes como null, nunca como 0
 
@@ -233,4 +233,4 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - Las decisiones D-001 a D-021 vienen del encargo inicial y no se volvieron a investigar. Solo se comprobaron contra la documentación oficial las afirmaciones marcadas como [Verificado].
 - D-006 y D-009 estuvieron pendientes de revisión por el paso de 3 horas de PM2.5; la Fase 1 mostró que la API entrega valores horarios y ambas quedaron definitivas sin cambiar la fuente ni las franjas.
 - Los enlaces de verificación se consultaron el 2026-10-09. La documentación de Open-Meteo y de ObjectDB puede cambiar.
-- La lista de decisiones DP-xx, todas resueltas el 2026-10-18, está en [fases.md](fases.md#decisiones-pendientes). D-010, D-011 (implementación) y D-014 se confirman en las fases 2 y 5.
+- La lista de decisiones DP-xx, todas resueltas el 2026-10-18, está en [fases.md](fases.md#decisiones-pendientes). D-010 y D-011 se confirmaron en la Fase 2; D-014 se confirma en la Fase 5.
