@@ -75,7 +75,7 @@ Si no hay entorno gráfico disponible, la aplicación debe guardar el PNG en lug
 
 ### Errores
 
-- **Traducir los errores técnicos.** El código de salida de Java ([arquitectura.md](arquitectura.md#códigos-de-salida-propuesta)) se convierte en un mensaje comprensible con una sugerencia de acción. Los detalles técnicos (stderr de Java, trazas) se muestran solo en modo detallado o se guardan en un archivo de log.
+- **Traducir los errores técnicos.** El código de salida de Java ([arquitectura.md](arquitectura.md#códigos-de-salida)) se convierte en un mensaje comprensible con una sugerencia de acción. Los detalles técnicos (stderr de Java, trazas) se muestran solo en modo detallado o se guardan en un archivo de log.
 - **Fallos de red.** Se indica qué intervalo falló, y los intervalos ya importados se conservan. Reintentar la opción 2 solo descarga lo que falta (D-015).
 - **Nunca se pierde el estado.** Ningún error deja la base a medias, porque cada import es transaccional (ver [arquitectura.md](arquitectura.md#notas-de-diseño)).
 

@@ -72,13 +72,22 @@ Ejemplo: el usuario elige «Actualizar datos» con la base vacía.
 
 ### Subcomandos
 
-| Subcomando | Entrada | Efecto | Respuesta por stdout |
-|---|---|---|---|
-| `coverage` | Ubicación y, opcionalmente, fuente y rango | Solo lectura | JSON con conteos, primer y último timestamp y, opcionalmente, la lista de timestamps existentes |
-| `import` | Ruta de un `.jsonl` en `staging/` y metadatos del lote (fuente, rango pedido, tipo NORMAL o CORRECCION) | Inserta en una o varias transacciones y crea el IngestionBatch | JSON con el id del lote y los conteos |
-| `export` | Ubicación, fuente(s), rango y ruta de destino en `exchange/` | Solo lectura | JSON con la ruta escrita y el número de líneas |
+Todos aceptan `--db <ruta>` (por defecto `data/clima.odb`); Python siempre lo pasa explícito. Las opciones son pares `--nombre valor` (definitivos, Fase 4).
 
-Los nombres de los argumentos y si `coverage` devuelve la lista completa de timestamps o solo los intervalos se fijan en la Fase 4 [Por verificar, Fase 4]. Con ~8 760 timestamps por fuente, la lista completa sería un JSON de unos cientos de KB, manejable [Supuesto]; aun así, es más limpio que Java devuelva los intervalos ya agrupados o los escriba en `exchange/` [Recomendación].
+| Subcomando | Opciones | Efecto | Respuesta por stdout |
+|---|---|---|---|
+| `import` | `--file <jsonl>` y `--meta <json>` con la fuente, la ubicación (`code`, `name`, `latitude`, `longitude`, `elevation_m`, `timezone`), `requested_start_utc`, `requested_end_utc`, `endpoint`, `params` y `notes` | Valida **todas** las líneas antes de escribir; asegura la ubicación; inserta en bloques de 500 y crea el IngestionBatch (tipo `NORMAL`) | `{"ok":true,"batch_id","received","inserted","duplicates","rejected"}` |
+| `coverage` | `--location`, `--source`, `--out <jsonl>` | Solo lectura; escribe en `--out` una línea `{"timestamp_utc","non_null":[...]}` por timestamp guardado | `{"ok":true,"location","source","count","non_null":{variable: n},"first","last","file","lines"}` |
+| `export` | `--location`, `--source`, `--from <ISO>`, `--to <ISO>`, `--out <jsonl>` | Solo lectura; escribe los registros de [from, to) ordenados, con `batch_id` | `{"ok":true,"file","lines"}` |
+
+Ejemplo real:
+
+```text
+$ java -jar java/target/clima-medellin.jar coverage --db data/clima.odb --location MED-CENTRO --source ERA5 --out exchange/coverage-ERA5.jsonl
+{"ok":true,"location":"MED-CENTRO","source":"ERA5","count":0,"non_null":{"temperature_2m_c":0,"relative_humidity_2m_pct":0,"wind_speed_10m_ms":0},"first":null,"last":null,"file":"exchange/coverage-ERA5.jsonl","lines":0}
+```
+
+**Formato de `coverage` (PV-19, resuelto en la Fase 4):** stdout lleva solo el resumen y la lista de timestamps va a un archivo de `exchange/`, con las variables no nulas de cada uno. Todos los cálculos de cobertura (porcentajes, huecos, intervalos faltantes) los hace Python, donde son funciones puras fáciles de probar.
 
 ### Reglas de stdout y stderr
 
@@ -86,7 +95,7 @@ Los nombres de los argumentos y si `coverage` devuelve la lista completa de time
 - **stderr recibe todos los logs** (progreso, avisos, trazas de excepciones). Python puede mostrarlos u ocultarlos según un nivel de detalle.
 - Si algo falla, Java escribe igualmente, si puede, un JSON de error por stdout (con un tipo y un mensaje) y termina con un código distinto de 0.
 
-### Códigos de salida (propuesta)
+### Códigos de salida
 
 | Código | Significado |
 |---|---|
@@ -96,7 +105,7 @@ Los nombres de los argumentos y si `coverage` devuelve la lista completa de time
 | 3 | Error de base de datos: no se puede abrir el archivo, está bloqueado o falla una transacción |
 | 4 | Error inesperado |
 
-[Recomendación] Separar los códigos permite a Python dar mensajes útiles («la base está en uso por otro proceso» frente a «el lote tiene una línea corrupta»). Se fijan en la Fase 4 (DP-05).
+Separar los códigos permite a Python dar mensajes útiles («la base está en uso por otro proceso» frente a «el lote tiene una línea corrupta»). La tabla es definitiva (DP-05); Python la traduce a mensajes en español ([implementacion.md](implementacion.md#42-el-contrato-un-json-por-stdout-y-un-código-de-salida)).
 
 ### Formato JSON Lines
 
@@ -116,8 +125,8 @@ En el ejemplo, `wind_speed_10m_ms` es `null`: ese valor no llegó en la respuest
 
 ### Ciclo de vida de los archivos
 
-- `staging/`: Python crea el archivo, Java lo lee y, si el import termina con éxito, Python lo borra o lo mueve a un histórico [decisión de la Fase 4].
-- `exchange/`: Java lo crea y Python lo lee. Se puede sobrescribir en cada exportación.
+- `staging/`: Python crea un archivo nuevo por lote (`<fuente>-<AAAAmmddTHHMMSSffffff>.jsonl`), Java lo lee y, si el import termina con código 0, Python lo **borra**. Si falla, se **conserva** y su ruta aparece en el mensaje de error.
+- `exchange/`: Java escribe `export-<fuente>.jsonl` y `coverage-<fuente>.jsonl` (nombre fijo) y Python los lee. Se sobrescriben en cada llamada; salir de la aplicación no borra nada.
 - Ambas carpetas son temporales y no se versionan en git [Recomendación].
 
 ## Modelo de clases
@@ -201,5 +210,5 @@ La organización interna de `python/` y `java/` (módulos, paquetes, herramienta
 
 - Los campos y los tipos de las entidades quedaron fijados en la Fase 2 (`java/src/main/java/co/climamedellin/entities/`).
 - La creación del archivo, el índice único y el comportamiento ante duplicados se verificaron en la Fase 2 con las pruebas de `RecordStoreTest`.
-- Se supone un único usuario y un único proceso Java a la vez. Cómo se comporta el archivo con dos procesos simultáneos está [Por verificar, Fase 4].
+- Se supone un único usuario y un único proceso Java a la vez. Si un proceso tiene el `.odb` abierto, un segundo proceso falla de inmediato con «currently in use by another process» (código 3) [Verificado: PV-15, Fase 4]; no hay espera ni reintento.
 - El coste de arrancar la JVM en cada subcomando se considera aceptable sin haberlo medido [Supuesto].

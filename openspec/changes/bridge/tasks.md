@@ -13,8 +13,8 @@
 
 ## 3. Documentación
 
-- [ ] 3.1 Escribir la sección 4 de `docs/implementacion.md` (subprocess, JSON Lines, contrato stdout/stderr, códigos de salida, camino completo ObjectDB → Python) con fragmentos reales; verificar con `uv run pytest`
-- [ ] 3.2 Resolver DP-05, PV-15 y PV-19 en `docs/arquitectura.md` (argumentos definitivos, formato de cobertura, ciclo de vida de archivos), marcar la Fase 4 en `docs/fases.md` y actualizar D-003/D-004 en `docs/decisiones.md`; verificar que no quedan `[Por verificar, Fase 4]`
+- [x] 3.1 Escribir la sección 4 de `docs/implementacion.md` (subprocess, JSON Lines, contrato stdout/stderr, códigos de salida, camino completo ObjectDB → Python) con fragmentos reales; verificar con `uv run pytest`
+- [x] 3.2 Resolver DP-05, PV-15 y PV-19 en `docs/arquitectura.md` (argumentos definitivos, formato de cobertura, ciclo de vida de archivos), marcar la Fase 4 en `docs/fases.md` y actualizar D-003/D-004 en `docs/decisiones.md`; verificar que no quedan `[Por verificar, Fase 4]`
 - [ ] 3.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

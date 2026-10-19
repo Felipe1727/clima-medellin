@@ -16,8 +16,8 @@ Este documento reúne las decisiones de diseño del proyecto en un formato liger
 |---|---|---|---|
 | [D-001](#d-001--python-orquesta-la-cli) | Python orquesta la CLI de 7 opciones | Definitiva | — |
 | [D-002](#d-002--java-es-el-único-que-accede-a-objectdb) | Java es el único que abre ObjectDB | Definitiva | — |
-| [D-003](#d-003--comunicación-entre-procesos-mediante-un-jar-con-subcomandos) | Comunicación por procesos: JAR con subcomandos | Definitiva | Fase 4 (detalles) |
-| [D-004](#d-004--intercambio-de-lotes-en-json-lines-y-reglas-de-stdoutstderr) | Lotes en JSON Lines; stdout solo JSON; logs en stderr | Definitiva | Fase 4 (detalles) |
+| [D-003](#d-003--comunicación-entre-procesos-mediante-un-jar-con-subcomandos) | Comunicación por procesos: JAR con subcomandos | Definitiva | — |
+| [D-004](#d-004--intercambio-de-lotes-en-json-lines-y-reglas-de-stdoutstderr) | Lotes en JSON Lines; stdout solo JSON; logs en stderr | Definitiva | — |
 | [D-005](#d-005--meteorología-open-meteo-historical-con-era5-explícito) | Meteorología: ERA5 explícito (`models=era5`) | Definitiva | — |
 | [D-006](#d-006--calidad-del-aire-pm25-de-cams-global-vía-open-meteo) | PM2.5 de CAMS global (modelo), tratado como horario | Definitiva | — |
 | [D-007](#d-007--un-único-punto-representativo-de-medellín) | Un único punto representativo (`MED-CENTRO`, 1 495 m) | Definitiva | — |
@@ -63,16 +63,16 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 - **Contexto:** Python necesita pedirle a Java tres cosas: la cobertura que hay guardada, que inserte un lote y que exporte datos.
 - **Opciones consideradas:** (a) Python ejecuta un JAR con subcomandos (`coverage`, `import`, `export`) como proceso hijo; (b) un servidor HTTP local en Java; (c) Py4J u otro puente en memoria entre la JVM y Python; (d) intercambiar archivos CSV sin un protocolo definido.
 - **Decisión:** (a). La comparación completa con las alternativas está en [arquitectura.md](arquitectura.md#justificación-frente-a-alternativas-descartadas).
-- **Consecuencias y limitaciones:** el diseño es simple, fácil de probar a mano desde la terminal y sin estado entre llamadas. A cambio, arrancar la JVM en cada llamada tiene un coste, y la concurrencia sobre el archivo `.odb` debe evitarse: solo un proceso Java a la vez [Por verificar: comportamiento de bloqueo del archivo, Fase 4].
-- **Estado:** definitiva. Los detalles (argumentos, códigos de salida) se fijan en la Fase 4.
+- **Consecuencias y limitaciones:** el diseño es simple, fácil de probar a mano desde la terminal y sin estado entre llamadas. A cambio, arrancar la JVM en cada llamada tiene un coste, y la concurrencia sobre el archivo `.odb` debe evitarse: solo un proceso Java a la vez: un segundo proceso que abre el mismo `.odb` falla de inmediato con un error de base de datos (código 3) [Verificado: PV-15, Fase 4].
+- **Estado:** definitiva. Los argumentos y los códigos de salida se fijaron en la Fase 4 ([arquitectura.md](arquitectura.md#subcomandos)).
 
 ## D-004 — Intercambio de lotes en JSON Lines y reglas de stdout/stderr
 
 - **Contexto:** los lotes pueden tener miles de registros (un año horario son 8 760 horas) y las respuestas de control son pequeñas.
 - **Opciones consideradas:** (a) lotes en archivos JSON Lines y respuestas pequeñas como JSON por stdout; (b) todo por stdout; (c) archivos CSV; (d) un único archivo JSON con una lista.
 - **Decisión:** (a). Los archivos que Python entrega a Java van en `staging/` y los que Java exporta para Python van en `exchange/`. Por stdout solo viaja un objeto JSON; los mensajes de log van a stderr.
-- **Consecuencias y limitaciones:** JSON Lines permite procesar línea a línea, detectar la línea exacta de un error y representar `null` de forma explícita, cosa que CSV no distingue bien de una cadena vacía. Como los archivos de `staging/` y `exchange/` son temporales, hay que definir cuándo se limpian (Fase 4).
-- **Estado:** definitiva. El formato concreto de cada línea se fija en la Fase 4.
+- **Consecuencias y limitaciones:** JSON Lines permite procesar línea a línea, detectar la línea exacta de un error y representar `null` de forma explícita, cosa que CSV no distingue bien de una cadena vacía. Como los archivos de `staging/` y `exchange/` son temporales, se definió su limpieza en la Fase 4: el lote de `staging/` se borra tras una importación correcta y se conserva si falla; `exchange/` se sobrescribe en cada llamada.
+- **Estado:** definitiva. El formato de cada línea se fijó en la Fase 4 ([arquitectura.md](arquitectura.md#formato-json-lines)).
 
 ## D-005 — Meteorología: Open-Meteo Historical con ERA5 explícito
 
