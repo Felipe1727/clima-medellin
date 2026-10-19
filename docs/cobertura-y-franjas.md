@@ -125,7 +125,7 @@ Nota: los «timestamps existentes» que devuelve `coverage` son los que tienen r
 
 - Los datos se guardan en UTC (D-008) y se convierten a America/Bogota **solo** para calcular franjas y perfiles.
 - La franja de la noche del 5 de marzo local corresponde a las 00:00–02:00 UTC del **6 de marzo**. Si se agrupara por fecha UTC, esa franja quedaría asignada al día equivocado. Por eso **se agrupa por el día civil local**, después de convertir.
-- Colombia no tiene horario de verano, así que no hay días de 23 ni de 25 horas [Por verificar en la base de datos tz, Fase 3]. Aun así, la conversión se hace con el nombre de la zona («America/Bogota») y no con un desfase fijo de −5, por robustez [Recomendación].
+- Colombia no tiene horario de verano, así que no hay días de 23 ni de 25 horas [Verificado: la base de datos tz da UTC−5 en todas las horas de 2025 y 2026, Fase 3]. Aun así, la conversión se hace con el nombre de la zona («America/Bogota») y no con un desfase fijo de −5, por robustez [Recomendación].
 
 ### Regla de mínimo de horas y NaN
 

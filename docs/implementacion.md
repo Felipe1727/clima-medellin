@@ -50,7 +50,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 |---|---|---|
 | [1. Punto de entrada del JAR y contrato de salida](#1-punto-de-entrada-del-jar-y-contrato-de-salida) | Disponible | `project-scaffold` |
 | [2. ObjectDB: entidades, transacciones, inserción y consultas JPQL](#2-objectdb-entidades-transacciones-inserción-y-consultas-jpql) | Disponible | `persistence` |
-| 3. Descarga de Open-Meteo y normalización con Pandas | Pendiente | `ingest` |
+| [3. Descarga de Open-Meteo y normalización con Pandas](#3-descarga-de-open-meteo-y-normalización-con-pandas) | Disponible | `ingest` |
 | 4. Puente Java↔Python: subprocesos, JSON Lines y de ObjectDB a Python | Pendiente | `bridge` |
 | 5. Ventana móvil, cobertura e intervalos faltantes | Pendiente | `coverage` |
 | 6. Zonas horarias, franjas y estadística descriptiva | Pendiente | `bands-stats` |
@@ -409,3 +409,167 @@ SELECT COUNT(b), MIN(b.anio), MAX(b.anio) FROM Libro b
 - Con la base vacía, los conteos valen 0 y `MIN`/`MAX` devuelven `null`.
 
 **Cuidado.** `COUNT(*)` no existe en JPQL; se escribe `COUNT(r)` con la variable de la entidad.
+
+---
+
+## 3. Descarga de Open-Meteo y normalización con Pandas
+
+El código está en `python/src/clima_medellin/`: `config.py` (ubicación, fuentes, unidades y rangos), `openmeteo.py` (peticiones HTTP) y `normalize.py` (de JSON a tabla). Las pruebas `test_openmeteo.py` y `test_normalize.py` no usan la red: el cliente se prueba con una sesión falsa y la normalización con las respuestas reales de `samples/`.
+
+### 3.1 Petición HTTP con `requests`
+
+**Concepto.** Una API REST se consulta con una petición HTTP GET a una URL con **parámetros de consulta** (`?latitude=6.2447&models=era5...`). La biblioteca `requests` construye la URL a partir de un diccionario y devuelve una respuesta con su **código de estado** (200 = correcto, 4xx = la petición está mal, 5xx = fallo del servidor) y su cuerpo JSON.
+
+**Sintaxis básica.**
+
+```python
+import requests
+
+respuesta = requests.get(
+    "https://archive-api.open-meteo.com/v1/archive",
+    params={"latitude": 6.2447, "longitude": -75.5748, "start_date": "2026-03-01",
+            "end_date": "2026-03-01", "hourly": "temperature_2m"},
+    timeout=60,                      # sin timeout, una red caída bloquea el programa
+)
+print(respuesta.status_code)         # 200
+datos = respuesta.json()             # dict de Python
+```
+
+**En este proyecto.** Los parámetros fijos de cada fuente están en `config.py` (`models=era5`, `elevation=1495`, `wind_speed_unit=ms` para ERA5; `domains=cams_global` para PM2.5) y `build_request` les añade el rango de fechas:
+
+<!-- fragmento: python/src/clima_medellin/openmeteo.py -->
+```python
+    config = SOURCES[source]
+    params = {
+        **config.fixed_params,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+    }
+    return config.url, params
+```
+
+- `SOURCES[source]` elige la configuración de `"ERA5"` o `"CAMS_GLOBAL"` (los mismos nombres que el enum `Source` de Java).
+- `{**config.fixed_params, ...}` copia los parámetros fijos y añade las fechas sin modificar el diccionario original.
+- `start.isoformat()` convierte una fecha en texto `aaaa-mm-dd`, que es lo que espera la API. Las fechas son **inclusivas**: `end_date=2026-03-31` incluye todo el día 31.
+
+**Cuidado.** La Air Quality API no documenta el parámetro `elevation`, por eso solo aparece en los parámetros de ERA5.
+
+### 3.2 Reintentos ante fallos transitorios
+
+**Concepto.** Una red o un servidor pueden fallar un momento. Reintentar con **espera creciente** (1 s, 2 s, 4 s) da tiempo a que se recuperen sin saturarlos. Solo tiene sentido reintentar los fallos transitorios (tiempo agotado, conexión caída, 5xx); un 4xx significa que la petición está mal y repetirla daría el mismo error.
+
+**Sintaxis básica.**
+
+```python
+for intento in range(4):
+    try:
+        r = requests.get(url, timeout=60)
+        if r.status_code < 500:
+            break                    # éxito o error definitivo: no se reintenta
+    except requests.Timeout:
+        pass
+    time.sleep(2 ** intento)         # 1, 2, 4, 8 segundos
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/openmeteo.py -->
+```python
+    for attempt in range(len(RETRY_DELAYS_S) + 1):
+        if attempt > 0:
+            sleep(RETRY_DELAYS_S[attempt - 1])
+        try:
+            response = http.get(url, params=params, timeout=TIMEOUT_S)
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            last_problem = type(exc).__name__
+            continue
+        if response.status_code >= 500:
+            last_problem = f"HTTP {response.status_code}"
+            continue
+        if response.status_code != 200:
+            raise OpenMeteoError(f"{label}: la API respondió HTTP {response.status_code}")
+        return response.json()
+```
+
+- `RETRY_DELAYS_S = (1, 2, 4)`: 1 intento inicial + 3 reintentos, con esperas de 1, 2 y 4 s.
+- `continue` salta al siguiente intento ante un fallo transitorio; un estado distinto de 200 y menor que 500 lanza `OpenMeteoError` en el acto.
+- `sleep` y `http` (la sesión) se reciben como parámetros: en las pruebas se pasa una sesión falsa que devuelve 503, 503 y 200, y una función que solo anota las esperas, así la prueba comprueba `[1, 2]` sin esperar de verdad.
+- Si se agotan los intentos, el error menciona la fuente y el rango (`ERA5 2026-03-01 → 2026-03-31`), para saber qué intervalo reintentar.
+
+**Cuidado.** Reintentar un 400 (por ejemplo, una fecha mal escrita) solo retrasaría el error tres veces.
+
+### 3.3 De JSON a DataFrame con índice UTC
+
+**Concepto.** Open-Meteo devuelve **listas paralelas**: `hourly.time` con las horas y una lista por variable con los valores en el mismo orden. Un **DataFrame** de Pandas las convierte en una tabla con un **índice temporal**. Como las horas llegan en GMT **sin sufijo de zona** (`"2026-03-01T13:00"`), hay que decirle a Pandas explícitamente que son UTC.
+
+**Sintaxis básica.**
+
+```python
+import pandas as pd
+
+horas = ["2026-03-01T13:00", "2026-03-01T14:00"]
+temperaturas = [21.4, None]
+indice = pd.to_datetime(horas, utc=True)          # 2026-03-01 13:00:00+00:00, ...
+tabla = pd.DataFrame({"temperature_2m_c": temperaturas}, index=indice)
+#                            temperature_2m_c
+# 2026-03-01 13:00:00+00:00              21.4
+# 2026-03-01 14:00:00+00:00               NaN
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/normalize.py -->
+```python
+    # Las horas llegan en GMT sin sufijo de zona: se interpretan explícitamente como UTC.
+    index = pd.DatetimeIndex(pd.to_datetime(hourly["time"], utc=True), name="timestamp_utc")
+    frame = pd.DataFrame(
+        {
+            v.column: pd.to_numeric(pd.Series(hourly[v.api_name]), errors="coerce").to_numpy(float)
+            for v in config.variables
+        },
+        index=index,
+    )
+```
+
+- `pd.to_datetime(..., utc=True)` crea timestamps **con zona** UTC. Sin `utc=True` serían «ingenuos» (sin zona) y una conversión posterior a hora de Medellín sería ambigua.
+- El diccionario por comprensión crea una columna por variable con su **nombre canónico** (`temperature_2m` → `temperature_2m_c`, `pm2_5` → `pm25_ug_m3`), que lleva la unidad en el nombre (D-022).
+- `pd.to_numeric(..., errors="coerce")` y `.to_numpy(float)` convierten los `None` del JSON en `NaN`, el «no hay dato» de Pandas (D-012).
+
+**Cuidado.** `pd.to_datetime(horas)` sin `utc=True` no da error, pero produce horas sin zona: el fallo aparecería mucho después, al calcular la franja de la noche, que en UTC cae en el día siguiente.
+
+### 3.4 Validar sin inventar valores: `where`, duplicados y recortes
+
+**Concepto.** Validar es detectar lo imposible (una humedad de 140 %) **sin sustituirlo por un valor inventado**: el valor pasa a `NaN` y se cuenta. Antes de guardar también se eliminan los timestamps repetidos, lo que queda en o después del fin efectivo de la fuente y las filas sin ningún dato (DP-12).
+
+**Sintaxis básica.**
+
+```python
+s = pd.Series([21.0, 80.0, None])
+valido = s.isna() | s.between(-20, 50)   # True donde el valor es plausible o ya falta
+s = s.where(valido)                      # donde valido es False, pone NaN
+# [21.0, NaN, NaN]
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/normalize.py -->
+```python
+    for variable in config.variables:
+        column = frame[variable.column]
+        plausible = column.isna() | column.between(variable.minimum, variable.maximum)
+        report.out_of_range[variable.column] = int((~plausible).sum())
+        frame[variable.column] = column.where(plausible)
+
+    duplicated = frame.index.duplicated(keep="first")
+    report.duplicates = int(duplicated.sum())
+    frame = frame[~duplicated]
+```
+
+- Los rangos plausibles están en `config.py`: temperatura −20..50 °C, humedad 0..100 %, viento 0..75 m/s y PM2.5 0..1000 µg/m³. Son amplios a propósito: solo atrapan valores imposibles.
+- `~plausible` invierte la máscara; su suma es el número de valores fuera de rango, que queda en el informe.
+- `index.duplicated(keep="first")` marca las repeticiones de un timestamp salvo la primera; `frame[~duplicated]` se queda con el resto.
+- Después, `frame.index >= end` elimina lo que está en o después del fin efectivo (las horas de ERA5 aún no publicadas llegan como `null`), y `frame.isna().all(axis=1)` encuentra las filas en las que **todas** las variables son `NaN`, que se descartan.
+
+Ejemplo real con la muestra anual de ERA5 descargada el 2026-10-18: llegan 8 760 horas, 96 están en o después del fin efectivo (00:00 UTC del 2026-10-14) y quedan **8 664 filas**, todas con datos.
+
+**Cuidado.** Rellenar los huecos con 0 (`fillna(0)`) haría que una hora sin viento medido pareciera una hora de calma total, y bajaría la media del viento.

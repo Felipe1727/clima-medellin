@@ -13,39 +13,19 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import requests
+
+from clima_medellin.config import CAMS_GLOBAL, ERA5, LOCAL_TZ
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SAMPLES_DIR = REPO_ROOT / "samples"
 
-# Punto representativo fijado en el roadmap (D-007, DP-11).
-LATITUDE = 6.2447
-LONGITUDE = -75.5748
-ELEVATION_M = 1495
-LOCAL_TZ = ZoneInfo("America/Bogota")
-
-ERA5_URL = "https://archive-api.open-meteo.com/v1/archive"
-AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
-
-ERA5_PARAMS = {
-    "latitude": LATITUDE,
-    "longitude": LONGITUDE,
-    "elevation": ELEVATION_M,
-    "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m",
-    "models": "era5",
-    "wind_speed_unit": "ms",
-    "timezone": "GMT",
-}
-# La Air Quality API no documenta el parámetro "elevation", así que no se envía.
-PM25_PARAMS = {
-    "latitude": LATITUDE,
-    "longitude": LONGITUDE,
-    "hourly": "pm2_5",
-    "domains": "cams_global",
-    "timezone": "GMT",
-}
+# Los parámetros fijos de cada fuente viven en clima_medellin.config.
+ERA5_URL = ERA5.url
+AIR_QUALITY_URL = CAMS_GLOBAL.url
+ERA5_PARAMS = ERA5.fixed_params
+PM25_PARAMS = CAMS_GLOBAL.fixed_params
 
 
 @dataclass(frozen=True)

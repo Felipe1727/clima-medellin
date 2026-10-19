@@ -11,7 +11,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 0 | Documentación y diseño | [x] | — |
 | 1 | Validación de las APIs | [x] | 0 |
 | 2 | Modelo de datos y persistencia en ObjectDB | [x] | 0 |
-| 3 | Ingesta y normalización en Python | [ ] | 1 |
+| 3 | Ingesta y normalización en Python | [x] | 1 |
 | 4 | Puente Java↔Python | [ ] | 2, 3 |
 | 5 | Cobertura histórica e incrementos | [ ] | 4 |
 | 6 | Franjas horarias y estadística descriptiva | [ ] | 5 |
@@ -116,10 +116,10 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** convertir una respuesta de la API en un DataFrame limpio y validado, listo para entregarse a Java.
 
 **Entregables:**
-- [ ] Cliente HTTP para las dos APIs con los parámetros fijados en la Fase 1.
-- [ ] Normalización: timestamps UTC, unidades canónicas (DP-06), validación de rangos, duplicados y nulos.
-- [ ] Reglas de rangos plausibles documentadas (por ejemplo, la humedad entre 0 y 100 %).
-- [ ] Pruebas con las muestras de `samples/` (sin red).
+- [x] Cliente HTTP para las dos APIs con los parámetros fijados en la Fase 1 (`python/src/clima_medellin/openmeteo.py`, con 3 reintentos).
+- [x] Normalización: timestamps UTC, unidades canónicas (DP-06), validación de rangos, duplicados y nulos (`normalize.py`).
+- [x] Reglas de rangos plausibles documentadas en [fuentes-y-datos.md](fuentes-y-datos.md#rangos-plausibles).
+- [x] Pruebas con las muestras de `samples/` (sin red): `test_openmeteo.py` y `test_normalize.py`.
 
 **Conceptos que se estudiarán:**
 - *DataFrame e índice temporal*: estructura central del análisis.
@@ -132,9 +132,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fase 1 (parámetros y formato reales).
 
-**Decisiones abiertas:** DP-06 (unidad del viento); PV-16 (zona horaria).
+**Decisiones abiertas:** DP-06 (resuelta: m/s); PV-16 resuelto.
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 
@@ -337,8 +337,8 @@ Todas se resolvieron en la sesión de exploración del 2026-10-18, con los resul
 | PV-13 | Índice único compuesto que incluya una relación con Location | [arquitectura.md](arquitectura.md) | Fase 2 | Resuelto: el índice admite la relación con Location |
 | PV-14 | Tipo temporal de Java admitido por ObjectDB para timestamps UTC | [arquitectura.md](arquitectura.md) | Fase 2 | Resuelto: `java.time.Instant`, exacto en cualquier zona horaria |
 | PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
-| PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 | Pendiente |
-| PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 | Pendiente |
+| PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 | Resuelto: UTC−5 en todas las horas de 2025 y 2026 |
+| PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 | Resuelto: Python 3.14.7, pandas 3.0.6, scikit-learn 1.9.1, statsmodels 0.15.0, Matplotlib 3.11.2, requests 2.34.2 |
 | PV-18 | Comportamiento de Matplotlib sin entorno gráfico | [cli-y-visualizaciones.md](cli-y-visualizaciones.md) | Fase 8 | Pendiente |
 | PV-19 | Formato de `coverage` (lista de timestamps o intervalos) y argumentos de los subcomandos | [arquitectura.md](arquitectura.md) | Fase 4 | Pendiente |
 
