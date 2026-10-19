@@ -8,6 +8,11 @@ persists it in ObjectDB through a Java JAR, and analyses it (coverage, time-of-d
 descriptive statistics, linear regression, charts). Every spec also keeps `docs/` in sync and grows
 `docs/implementacion.md`, a technical guide with real, test-verified excerpts of the project's code.
 
+Second iteration (exploration 2026-10-19): make the CLI attractive and understandable for
+non-technical users (colours, formatted tables, plain-language explanations) and add three
+calendar models that predict the typical temperature, humidity and PM2.5 for any hour, day or
+range of up to 31 days, evaluated honestly against a baseline.
+
 ## Guidelines
 
 ### Stack (locked)
@@ -15,6 +20,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
   `https://m2.objectdb.com`, Jackson for JSON, JUnit 5, maven-shade -> `java/target/clima-medellin.jar`.
 - Python 3.14 managed with uv (`python/pyproject.toml`), pandas, scikit-learn, statsmodels (VIF,
   Durbin-Watson), matplotlib, requests; pytest; ruff.
+- `rich` (Python) for the terminal UI: colours, tables, panels, progress bars; respects `NO_COLOR`.
 - GitHub Actions CI (`.github/workflows/ci.yml`) on pull_request and push to main: sets up Java 25 and
   uv, runs Install, Test and Lint. No branch protection.
 
@@ -91,10 +97,45 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
 - CLI: interactive 7-option menu as a thin layer over plain functions; `[s/N]` confirmation before
   downloads.
 
+### Locked decisions (second exploration, 2026-10-19)
+- Calendar models: three separate linear regressions (temperature, humidity, PM2.5) whose only
+  inputs are the local datetime: 23 hour-of-day indicators (00:00 is the reference) plus the
+  seasonal wave sin/cos(2*pi*day_of_year/365.25). No scaler (coefficients read directly in
+  units), original scale, no day-of-week effects.
+- Window stays one year (D-016); no 5-year extension. Backtest evidence (11 quarters, 2024-2026):
+  12 months of training beats 9 months and beats 4-5 years (interannual regime changes; CAMS
+  has no PM2.5 before 2022-08).
+- Evaluation: the existing temporal split (D-018) against the baseline (training mean), MAE,
+  RMSE and R²; the test MAE is shown to users as "error típico". Predictions use the same model
+  refitted on the full window. Models are retrained from the database on each use and never
+  stored (no new entities).
+- The existing PM2.5 <- weather regression (D-017..D-020) is unchanged.
+- Prediction requests: local time; inputs "Desde" and "Hasta" (Enter = only that date/hour);
+  formats AAAA-MM-DD, AAAA-MM-DD HH, AAAA-MM-DD HH:MM; a date without hour = the whole day
+  (00:00..23:00). Allowed from the window start to today + 365 days, at most 31 days per request.
+  The three variables are shown side by side; hours with stored data show prediction, real value
+  and difference, otherwise the prediction labelled "valor típico". Ranges over 2 days show a
+  daily summary (mean, min, max) with the hourly table on request, plus a chart (prediction line,
+  band of +/- typical error, real values when they exist) using the window/PNG choice.
+- Menu (Spanish, grouped): DATOS 1 Ver qué datos hay guardados, 2 Descargar los datos que faltan,
+  3 Consultar registros por fecha; ANÁLISIS 4 Resumen estadístico, 5 Evaluar los modelos (qué tan
+  bien predicen); PREDICCIONES 6 Predecir temperatura, humedad o PM2.5 para una fecha u hora,
+  7 Generar gráficas; 0 Salir. Header with location, window and coloured database state.
+- Plain language: every result screen ends with a "Qué significa" panel (2-3 everyday
+  sentences); jargon is translated on first use ("error típico (MAE)", "qué tanto explica el
+  modelo (R²)"); colour never carries meaning alone (always with a word); inputs show an example
+  and invalid input explains what was expected; long operations show a progress bar.
+- The menu receives a `rich` Console; tests use a recording console with colours off and check
+  the plain text.
+- New decisions D-024 (calendar models) and D-025 (rich CLI and plain language); new Phase 10 in
+  `docs/fases.md`.
+
 ## Out of scope
 - Production concerns: multi-user, concurrent runs, servers, deployment, availability guarantees.
-- Forecasting, station/measured data, multiple locations (the model allows it; not implemented),
-  non-linear or neural models, log-transformed models.
+- Weather forecasts from external sources (the calendar models' typical-value predictions are in
+  scope), station/measured data, multiple locations (the model allows it; not implemented),
+  non-linear or neural models, log-transformed models, storing trained models, windows longer
+  than one year, day-of-week effects.
 - Value corrections or updates (`CORRECCION` batches), distinguishing ERA5T from final ERA5,
   deleting data that leaves the window.
 - Correcting the CAMS forecast-run seams.
@@ -243,3 +284,48 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
     - `docs/fases.md` all phases updated; every remaining `[Por verificar]` resolved or justified;
       `implementacion.md` final consistency pass (index complete, all excerpts verified).
   - Depends on: visualizations
+
+- [ ] `calendar-models` — Three calendar models (temperature, humidity, PM2.5) with evaluation and predictions
+  - Acceptance:
+    - Feature builder: for local datetimes, 23 hour indicators + seasonal sin/cos; 00:00 is all zeros.
+    - Per variable: fit on the training split, evaluate on the test split against the baseline
+      (MAE, RMSE, R²), refit on the full window; coefficients exposed in original units (hour
+      effects vs midnight and the seasonal wave).
+    - Prediction for a single hour, a whole day (24 hours) or a range (each hour, both ends
+      included), in local time, with validation of the allowed range (window start .. today + 365
+      days, at most 31 days) and Spanish error messages.
+    - Joins stored real values when they exist (prediction, real, difference).
+    - Tests: known synthetic hour effects and seasonal wave are recovered; date-only input yields
+      24 hours; range limits rejected; evaluation uses only training rows to fit; deterministic;
+      on the samples, the temperature model's test MAE beats its baseline.
+    - Docs: calendar-models section in `regresion.md` (idea, features, recipe with real
+      coefficients, evaluation results with the samples, limits), D-024 in `decisiones.md`, Phase 10
+      in `fases.md`, `implementacion.md` section on one-hot and cyclic features with real excerpts.
+  - Depends on: cli-integration
+
+- [ ] `cli-ux` — rich look and plain-language layer for the existing menu
+  - Acceptance:
+    - Menu regrouped as locked (DATOS / ANÁLISIS / PREDICCIONES, 0 = Salir; option 6 may show
+      "próximamente" until `prediction-menu`), header with location, window and coloured state.
+    - All existing screens use rich tables and panels; downloads and chart generation show progress.
+    - Every result screen ends with a "Qué significa" panel; jargon translated on first use;
+      colour always paired with a word; inputs show an example; invalid input explains the format.
+    - `NO_COLOR` and non-terminal output produce plain text.
+    - Existing menu tests adapted to the recording console; end-to-end test still passes.
+    - Docs: D-025, `cli-y-visualizaciones.md` (new menu and screens), `implementacion.md` section on rich.
+  - Depends on: calendar-models
+
+- [ ] `prediction-menu` — Prediction option, model evaluation screen and new chart
+  - Acceptance:
+    - Option 6: "Desde"/"Hasta" prompts with the locked formats and limits; single hour, day and
+      range; three variables side by side with "error típico"; real + difference for stored hours,
+      "valor típico" otherwise; ranges over 2 days show the daily summary, the hourly table on
+      request and a chart (window/PNG).
+    - Option 5: one table with the three calendar models and the PM2.5 <- weather model, each
+      against its baseline, followed by the weather-model detail; "Qué significa" panel.
+    - Option 7 adds the "efecto de cada hora" chart (3 panels), 14 charts in total.
+    - End-to-end test extended: predict a past day (real values shown), a future date and a
+      3-day range (summary + PNG chart); invalid dates and limits explained.
+    - Docs: `cli-y-visualizaciones.md`, `implementacion.md` (prediction screen), README usage,
+      `fases.md` Phase 10 completed.
+  - Depends on: cli-ux
