@@ -285,7 +285,7 @@ range of up to 31 days, evaluated honestly against a baseline.
       `implementacion.md` final consistency pass (index complete, all excerpts verified).
   - Depends on: visualizations
 
-- [ ] `calendar-models` — Three calendar models (temperature, humidity, PM2.5) with evaluation and predictions
+- [x] `calendar-models` — Three calendar models (temperature, humidity, PM2.5) with evaluation and predictions
   - Acceptance:
     - Feature builder: for local datetimes, 23 hour indicators + seasonal sin/cos; 00:00 is all zeros.
     - Per variable: fit on the training split, evaluate on the test split against the baseline
