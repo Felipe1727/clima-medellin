@@ -55,7 +55,7 @@ Los fragmentos reales se marcan con un comentario HTML justo antes del bloque de
 | [5. Ventana móvil, cobertura e intervalos faltantes](#5-ventana-móvil-cobertura-e-intervalos-faltantes) | Disponible | `coverage` |
 | [6. Zonas horarias, franjas y estadística descriptiva](#6-zonas-horarias-franjas-y-estadística-descriptiva) | Disponible | `bands-stats` |
 | [7. Unión de datos, split temporal y regresión](#7-unión-de-datos-split-temporal-y-regresión) | Disponible | `regression` |
-| 8. Gráficas con Matplotlib | Pendiente | `visualizations` |
+| [8. Gráficas con Matplotlib](#8-gráficas-con-matplotlib) | Disponible | `visualizations` |
 | 9. Menú de la CLI | Pendiente | `cli-integration` |
 
 ---
@@ -1248,3 +1248,149 @@ durbin_watson(residuos)                       # ≈ 2 independientes; ≈ 0 auto
 - Durbin-Watson se calcula con `durbin_watson(residuals)` sobre los residuos de la prueba en orden temporal.
 
 Resultado real con las muestras (D = 2026-10-18; detalle e interpretación en [regresion.md](regresion.md#resultado-con-las-muestras)): MAE del modelo 5,72 frente a 6,10 µg/m³ de la línea base, R² −0,67 frente a −0,66, VIF entre 1,3 y 4,1 y **Durbin-Watson 0,14**: los residuos están fuertemente autocorrelacionados.
+
+---
+
+## 8. Gráficas con Matplotlib
+
+El código está en `python/src/clima_medellin/plots.py`: una función por gráfica, que recibe datos ya calculados (secciones 5 a 7) y devuelve una `Figure`, más `save_or_show` para mostrarla o guardarla. Las pruebas (`test_plots.py`) usan el backend Agg, que dibuja en memoria sin abrir ventanas (`tests/conftest.py`).
+
+### 8.1 Anatomía de una figura
+
+**Concepto.** En Matplotlib, una **figura** (`Figure`) es el lienzo y cada **eje** (`Axes`) es un gráfico dentro de él, con su eje x, su eje y y sus marcas. `plt.subplots(filas, columnas)` crea los dos a la vez. Todo lo que se ve (líneas, barras, textos) es un objeto que se puede consultar después, lo que permite **probar** una gráfica sin mirarla: por ejemplo, leer los datos de una línea o el texto del título.
+
+**Sintaxis básica.**
+
+```python
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(8, 4))         # lienzo de 8 × 4 pulgadas con un eje
+ax.plot(horas, temperaturas, color="#2a78d6")
+ax.set_xlabel("Hora local")
+ax.set_ylabel("Temperatura a 2 m (°C)")         # siempre con la unidad
+fig.suptitle("Perfil diurno")
+fig.savefig("perfil.png", dpi=150)
+```
+
+**En este proyecto.** Toda gráfica termina en `_finish`, que añade la anotación obligatoria (D-023): título, periodo y la atribución que exige la licencia de los datos.
+
+<!-- fragmento: python/src/clima_medellin/plots.py -->
+```python
+    height = fig.get_figheight()
+    fig.suptitle(
+        title,
+        x=0.01,
+        y=1 - 0.12 / height,
+        ha="left",
+        va="top",
+        fontsize=12,
+        fontweight="bold",
+        color=INK,
+    )
+    fig.text(0.01, 1 - 0.42 / height, period, ha="left", va="top", fontsize=9, color=INK_SECONDARY)
+    fig.text(0.99, 0.01, ATTRIBUTION, ha="right", fontsize=8, color=INK_MUTED)
+    fig.tight_layout(rect=(0, 0.25 / height, 1, 1 - 0.7 / height))
+```
+
+- Las coordenadas de `fig.text` van de 0 a 1 sobre el lienzo. Restar `0,12 / altura` coloca el título a 0,12 pulgadas del borde superior sea cual sea la altura de la figura: así el título y el periodo no se solapan en figuras bajas (se comprobó al revisar las gráficas generadas).
+- `tight_layout(rect=...)` reparte los ejes en el espacio que queda libre entre la cabecera y la atribución.
+- Los colores siguen la guía de visualización del proyecto: una serie en azul `#2a78d6`, una segunda serie en naranja `#eb6834` (paleta validada con su script: separación suficiente incluso con daltonismo), rejilla y ejes en grises claros para que los datos destaquen.
+
+**Cuidado.** Un eje sin unidad («Temperatura» en lugar de «Temperatura a 2 m (°C)») obliga a adivinar; las pruebas comprueban que los ejes de magnitudes físicas llevan la unidad entre paréntesis.
+
+### 8.2 Huecos honestos: no unir donde faltan datos
+
+**Concepto.** `ax.plot` une con una línea los puntos consecutivos que recibe. Si a la serie le faltan filas, une el último valor antes del hueco con el primero después y el hueco **desaparece**. Pero Matplotlib **corta la línea en los NaN**: basta con que las horas sin dato estén presentes como NaN.
+
+**Sintaxis básica.**
+
+```python
+ax.plot([0, 1, 2, 3, 4], [5, 6, float("nan"), 8, 9])   # dos tramos: 0-1 y 3-4
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/plots.py -->
+```python
+    hours = pd.date_range(
+        pd.Timestamp(start).ceil("h"), pd.Timestamp(end), freq="h", inclusive="left"
+    )
+    # Reindexar a la rejilla horaria completa: las horas sin fila pasan a NaN y
+    # Matplotlib no une los puntos a ambos lados de un NaN.
+    series = frame[column].reindex(hours).tz_convert(LOCAL_TZ)
+```
+
+- `reindex(hours)` crea una fila por cada hora del periodo; las que no estaban quedan en NaN.
+- `tz_convert(LOCAL_TZ)` dibuja el eje x en hora de Medellín.
+- La prueba `test_time_series_does_not_join_a_gap` quita 5 horas y comprueba que la línea tiene NaN justo en esas posiciones.
+
+El mismo principio se usa en el **mapa de cobertura**: cada celda (día local × hora local) es *presente* (azul), *parcial* (naranja, alguna variable nula) o *ausente* (gris claro, que se lee como «nada»), con leyenda para no depender solo del color.
+
+### 8.3 Backends: ventana o archivo
+
+**Concepto.** Matplotlib dibuja a través de un **backend**: uno interactivo (por ejemplo, TkAgg o QtAgg) abre una ventana con zoom; uno de archivo (Agg, pdf, svg) solo puede guardar. En un servidor o una terminal sin entorno gráfico no hay ventana posible, y `plt.show()` no mostraría nada.
+
+**Sintaxis básica.**
+
+```python
+import matplotlib
+matplotlib.get_backend()       # 'agg' sin pantalla, 'tkagg' o 'qtagg' con pantalla
+matplotlib.use("Agg")          # forzar el backend de archivo (lo hacen las pruebas)
+```
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/plots.py -->
+```python
+    if matplotlib.get_backend().lower() in NON_INTERACTIVE:
+        return False
+    if sys.platform.startswith("linux"):
+        return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    return True
+```
+
+- Primero se mira el backend: si es de archivo, no hay ventana.
+- En Linux, además, una ventana necesita un servidor gráfico: X11 (`DISPLAY`) o Wayland (`WAYLAND_DISPLAY`). Sin ninguno de los dos, se guarda el PNG (PV-18).
+
+### 8.4 Guardar como PNG sin sobrescribir
+
+**Concepto.** `fig.savefig(ruta, dpi=150)` escribe la imagen. El nombre incluye la gráfica y la fecha y hora de generación (`outputs/perfil_diurno_20261018-233927.png`), para no sobrescribir resultados anteriores; si ya existe un archivo con ese nombre (dos gráficas en el mismo segundo), se añade `-2`, `-3`…
+
+**En este proyecto.**
+
+<!-- fragmento: python/src/clima_medellin/plots.py -->
+```python
+    notice = None
+    if mode == "ventana":
+        if has_display():
+            plt.show()
+            plt.close(fig)
+            return Output(path=None)
+        notice = "No hay pantalla disponible: la gráfica se guarda como PNG."
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    path = _png_path(name, outputs_dir)
+    fig.savefig(path, dpi=150, facecolor=SURFACE)
+    plt.close(fig)
+```
+
+- Con `mode="ventana"` y pantalla, `plt.show()` abre la ventana y el programa espera a que se cierre.
+- Sin pantalla, en lugar de fallar, se guarda el PNG y se devuelve un aviso con la ruta, que la CLI muestra como `[AVISO]` (DP-10).
+- `plt.close(fig)` libera la memoria de la figura; sin ello, generar muchas gráficas seguidas acumularía figuras abiertas.
+
+**Cuidado.** `plt.show()` muestra **todas** las figuras abiertas; por eso cada función crea su figura, la entrega y `save_or_show` la cierra al terminar.
+
+### 8.5 Las gráficas del proyecto
+
+| Función | Gráfica | Pregunta que responde |
+|---|---|---|
+| `time_series` | Serie temporal de una variable, con los huecos como cortes | ¿Cómo evolucionó durante el año? ¿Hay huecos o saltos? |
+| `diurnal_profile` | Media ± desviación por hora local (entrenamiento), franjas sombreadas | ¿Cuál es el ciclo diario? ¿Caen las franjas en sus momentos característicos? |
+| `band_boxplots` | Cajas por franja, con los días válidos | ¿Difieren mañana, tarde y noche? |
+| `scatter_predictors` | PM2.5 frente a cada predictora (entrenamiento) | ¿Hay una relación visible y aproximadamente lineal? |
+| `correlation_matrix` | Correlaciones de las 4 variables, escala divergente azul ↔ rojo con gris en 0 | ¿Están correlacionadas las predictoras (multicolinealidad)? |
+| `coverage_map` | Días × horas locales: presente, parcial o ausente | ¿Dónde están los huecos? |
+| `seam_diagnostic` | Salto medio de PM2.5 por hora UTC, con 00 y 12 UTC destacadas | ¿Hay saltos artificiales por los empalmes del pronóstico? |
+| `actual_vs_predicted` | Real frente a predicho (con y = x) y las dos series en el tiempo | ¿Cuánto se acerca el modelo y dónde falla? |
+| `residuals` | Residuos frente a predichos, en el tiempo (con Durbin-Watson) e histograma | ¿Queda un patrón que el modelo no captura? |
+
+Con las muestras, el diagnóstico de empalmes muestra barras de 7,4 µg/m³ (00 UTC) y 5,6 µg/m³ (12 UTC) frente a menos de 2,6 en el resto de horas, y la gráfica de real frente a predicho deja ver que el modelo no alcanza los picos de PM2.5 del periodo de prueba ([regresion.md](regresion.md#resultado-con-las-muestras)).

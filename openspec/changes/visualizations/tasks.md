@@ -8,8 +8,8 @@
 
 ## 2. Documentación
 
-- [ ] 2.1 Escribir la sección 8 de `docs/implementacion.md` (anatomía de una figura, huecos, backends, PNG) con fragmentos reales; verificar con `uv run pytest`
-- [ ] 2.2 Actualizar `docs/cli-y-visualizaciones.md` (lista definitiva con la gráfica de empalmes, salida, PV-18), `docs/fases.md` (Fase 8) y `docs/decisiones.md` (D-023); verificar que no quedan `[Por verificar, Fase 8]`
+- [x] 2.1 Escribir la sección 8 de `docs/implementacion.md` (anatomía de una figura, huecos, backends, PNG) con fragmentos reales; verificar con `uv run pytest`
+- [x] 2.2 Actualizar `docs/cli-y-visualizaciones.md` (lista definitiva con la gráfica de empalmes, salida, PV-18), `docs/fases.md` (Fase 8) y `docs/decisiones.md` (D-023); verificar que no quedan `[Por verificar, Fase 8]`
 - [ ] 2.3 Verificar que el workflow de CI queda en verde en el pull request de esta especificación
 
 ## Workflow follow-up

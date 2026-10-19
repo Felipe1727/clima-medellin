@@ -38,7 +38,7 @@ Este documento describe la experiencia del usuario: el menú de la aplicación d
 - Con la base vacía, las opciones 3 a 6 sugieren ejecutar primero la opción 2.
 - Toda hora mostrada al usuario va en hora local de Medellín, con la UTC al lado cuando sea relevante (opción 3).
 
-## Gráficas previstas
+## Gráficas
 
 | Gráfica | Pregunta que responde | Datos necesarios |
 |---|---|---|
@@ -49,18 +49,19 @@ Este documento describe la experiencia del usuario: el menú de la aplicación d
 | **Matriz de correlación** | ¿Están correlacionadas las predictoras entre sí (multicolinealidad)? | Las 4 variables del entrenamiento |
 | **Real frente a predicho** | ¿Cuánto se acerca el modelo? ¿Dónde falla? | Los valores reales y predichos de la prueba: un gráfico de dispersión con la diagonal y y = x, y la serie temporal superpuesta |
 | **Residuos** | ¿Hay patrones que el modelo no captura (varianza no constante, autocorrelación)? | Residuos frente a predichos, residuos en el tiempo y un histograma de residuos |
-| **Mapa de cobertura** | ¿Dónde están los huecos? | Una matriz de días × horas locales coloreada según el dato (presente, nulo o ausente), una por fuente |
+| **Mapa de cobertura** | ¿Dónde están los huecos? | Una matriz de días × horas locales coloreada según el dato (presente, parcial si alguna variable es nula, o ausente), una por fuente |
+| **Diagnóstico de empalmes** | ¿Hay saltos artificiales en PM2.5 por el empalme de los pronósticos de CAMS? | El salto absoluto medio de PM2.5 hacia cada hora UTC, con las 00 y 12 UTC destacadas ([fuentes-y-datos.md](fuentes-y-datos.md#empalmes-de-las-ejecuciones-del-pronóstico-00-y-12-utc)) |
 
-Cada gráfica lleva título, ejes con unidades, el periodo y una nota de fuente («Datos: Open-Meteo.com (ERA5, CAMS)»), como exige la atribución ([fuentes-y-datos.md](fuentes-y-datos.md#licencia-y-atribución)).
+Cada gráfica lleva título, ejes con unidades, el periodo y una nota de fuente («Datos: Open-Meteo.com (ERA5, CAMS)»), como exige la atribución ([fuentes-y-datos.md](fuentes-y-datos.md#licencia-y-atribución)). Implementación (Fase 8): `python/src/clima_medellin/plots.py`, explicada en [implementacion.md](implementacion.md#8-gráficas-con-matplotlib). Las gráficas del perfil, la dispersión y la correlación usan solo el entrenamiento; las de real frente a predicho y residuos, solo la prueba.
 
 ## Ventana o PNG
 
 | Modo | Cuándo conviene | Consideraciones |
 |---|---|---|
 | **Ventana interactiva** | Para explorar: hacer zoom en una serie o revisar un hueco | Necesita un entorno gráfico; el programa se detiene hasta cerrar la ventana |
-| **PNG** | Para el informe, la presentación o equipos sin pantalla gráfica | Se guarda en `outputs/` con un nombre que incluye la gráfica y la fecha de generación, para no sobrescribir resultados anteriores [Recomendación] |
+| **PNG** | Para el informe, la presentación o equipos sin pantalla gráfica | Se guarda en `outputs/<gráfica>_<AAAAmmdd-HHMMSS>.png`; si el nombre ya existe se añade `-2`, `-3`…, así nunca se sobrescribe un resultado anterior |
 
-Si no hay entorno gráfico disponible, la aplicación debe guardar el PNG en lugar de fallar [Recomendación]. Cómo detectarlo con Matplotlib está [Por verificar, Fase 8].
+La aplicación pregunta cada vez el modo (DP-10). Si no hay entorno gráfico disponible, guarda el PNG en lugar de fallar y lo avisa con la ruta. Detección (PV-18, resuelto en la Fase 8): no hay ventana si el backend de Matplotlib es de archivo (Agg, pdf, svg…) o si, en Linux, no están definidas ni `DISPLAY` (X11) ni `WAYLAND_DISPLAY` (Wayland).
 
 ## Experiencia de usuario en la terminal
 
@@ -88,6 +89,6 @@ Si no hay entorno gráfico disponible, la aplicación debe guardar el PNG en lug
 ## Limitaciones y supuestos
 
 - Las maquetas y los mensajes son ilustrativos; el texto final se ajusta en las fases 8 y 9.
-- La lista de gráficas es la prevista; puede reducirse si alguna no aporta (por ejemplo, la matriz de correlación es redundante con el VIF).
-- No se ha comprobado el comportamiento de Matplotlib sin pantalla gráfica en el equipo del estudiante (Fase 8).
+- La lista de gráficas es definitiva (Fase 8): las 8 previstas más el diagnóstico de empalmes acordado en la exploración. La matriz de correlación se mantiene aunque solapa en parte con el VIF, porque muestra además la relación de cada predictora con PM2.5.
+- El comportamiento sin pantalla se prueba con el backend Agg (`test_window_without_display_falls_back_to_png`); la ventana interactiva en el equipo del estudiante depende de que haya un backend gráfico instalado.
 - Se supone un único usuario y una sola ejecución a la vez.

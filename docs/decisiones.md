@@ -225,7 +225,7 @@ Las decisiones D-001 a D-021 vienen del encargo inicial (sección 2). D-022 y D-
 
 ## D-023 — Visualizaciones con Matplotlib, en ventana o PNG
 
-- **Decisión:** generar las gráficas con Matplotlib. La aplicación pregunta cada vez si mostrarlas en una ventana o guardarlas como PNG (`outputs/<gráfica>_<AAAAmmdd-HHMMSS>.png`); si no hay pantalla disponible, guarda el PNG automáticamente y lo avisa (DP-10). Cada gráfica lleva título, unidades, periodo y «Datos: Open-Meteo.com (ERA5, CAMS)». Ver [cli-y-visualizaciones.md](cli-y-visualizaciones.md).
+- **Decisión:** generar las gráficas con Matplotlib. La aplicación pregunta cada vez si mostrarlas en una ventana o guardarlas como PNG (`outputs/<gráfica>_<AAAAmmdd-HHMMSS>.png`); si no hay pantalla disponible, guarda el PNG automáticamente y lo avisa (DP-10). Cada gráfica lleva título, unidades, periodo y «Datos: Open-Meteo.com (ERA5, CAMS)». Implementado en la Fase 8 (`plots.py`), con 9 gráficas: las 8 previstas y el diagnóstico de empalmes. Ver [cli-y-visualizaciones.md](cli-y-visualizaciones.md).
 - **Estado:** definitiva.
 
 ## Limitaciones y supuestos
