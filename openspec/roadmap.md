@@ -134,7 +134,7 @@ descriptive statistics, linear regression, charts). Every spec also keeps `docs/
       morning and night bands); DP-12 rule updated.
   - Depends on: project-scaffold
 
-- [ ] `persistence` — ObjectDB entities, unique natural key, insert-only batch insertion, queries
+- [x] `persistence` — ObjectDB entities, unique natural key, insert-only batch insertion, queries
   - Acceptance:
     - Entities Location, WeatherRecord, AirQualityRecord, IngestionBatch per `arquitectura.md`, nullable
       wrapper types, units in field names.
