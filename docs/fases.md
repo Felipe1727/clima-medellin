@@ -16,7 +16,7 @@ Este es el documento central de seguimiento del proyecto. Divide el trabajo en f
 | 5 | Cobertura histórica e incrementos | [x] | 4 |
 | 6 | Franjas horarias y estadística descriptiva | [x] | 5 |
 | 7 | Regresión lineal y evaluación | [x] | 6 |
-| 8 | Visualizaciones | [ ] | 6, 7 |
+| 8 | Visualizaciones | [x] | 6, 7 |
 | 9 | CLI integrada, pruebas finales y defensa | [ ] | 1–8 |
 
 Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
@@ -255,9 +255,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 **Objetivo:** producir las gráficas de [cli-y-visualizaciones.md](cli-y-visualizaciones.md#gráficas-previstas) con salida en ventana o PNG.
 
 **Entregables:**
-- [ ] Series temporales, perfil diurno, comparación por franjas, dispersiones, matriz de correlación, real frente a predicho, residuos y mapa de cobertura.
-- [ ] Salida en ventana y en PNG en `outputs/`, con atribución de la fuente en cada gráfica.
-- [ ] Comportamiento sin entorno gráfico (PV-18).
+- [x] Series temporales, perfil diurno, comparación por franjas, dispersiones, matriz de correlación, real frente a predicho, residuos y mapa de cobertura, más el diagnóstico de empalmes de PM2.5 (`plots.py`).
+- [x] Salida en ventana y en PNG en `outputs/`, con atribución de la fuente en cada gráfica.
+- [x] Comportamiento sin entorno gráfico (PV-18): PNG automático con aviso.
 
 **Conceptos que se estudiarán:**
 - *Elección del tipo de gráfica según la pregunta*: cada gráfica responde algo concreto.
@@ -268,9 +268,9 @@ Las fases 1 y 2 son independientes y pueden hacerse en paralelo.
 
 **Dependencias:** Fases 6 y 7.
 
-**Decisiones abiertas:** DP-10.
+**Decisiones abiertas:** DP-10 (resuelta: preguntar cada vez; PNG con aviso si no hay pantalla).
 
-**Estado:** [ ] pendiente.
+**Estado:** [x] completada.
 
 ---
 
@@ -339,7 +339,7 @@ Todas se resolvieron en la sesión de exploración del 2026-10-18, con los resul
 | PV-15 | Comportamiento del archivo `.odb` con dos procesos simultáneos | [arquitectura.md](arquitectura.md) | Fase 4 | Resuelto: el segundo proceso falla de inmediato (código 3) |
 | PV-16 | America/Bogota = UTC−5 sin horario de verano en la base tz | [cobertura-y-franjas.md](cobertura-y-franjas.md) | Fase 3 | Resuelto: UTC−5 en todas las horas de 2025 y 2026 |
 | PV-17 | Versiones de Python, Pandas, scikit-learn y Matplotlib | [README.md](../README.md) | Fase 3 | Resuelto: Python 3.14.7, pandas 3.0.6, scikit-learn 1.9.1, statsmodels 0.15.0, Matplotlib 3.11.2, requests 2.34.2 |
-| PV-18 | Comportamiento de Matplotlib sin entorno gráfico | [cli-y-visualizaciones.md](cli-y-visualizaciones.md) | Fase 8 | Pendiente |
+| PV-18 | Comportamiento de Matplotlib sin entorno gráfico | [cli-y-visualizaciones.md](cli-y-visualizaciones.md) | Fase 8 | Resuelto: backend de archivo o Linux sin `DISPLAY`/`WAYLAND_DISPLAY` → PNG con aviso |
 | PV-19 | Formato de `coverage` (lista de timestamps o intervalos) y argumentos de los subcomandos | [arquitectura.md](arquitectura.md) | Fase 4 | Resuelto: resumen por stdout y timestamps en `exchange/` |
 
 ## Limitaciones y supuestos
