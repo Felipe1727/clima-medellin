@@ -1,6 +1,6 @@
 # CLI y visualizaciones
 
-Este documento describe la experiencia del usuario: el menú de la aplicación de terminal, qué hace y qué muestra cada opción, qué gráficas se generan y para qué sirven, y cómo comunica la aplicación su estado y sus errores. Las decisiones que se apoyan en este documento son D-001 y D-023 ([decisiones.md](decisiones.md)). Las ejecuciones de terminal mostradas son **maquetas ficticias**, no salidas reales.
+Este documento describe la experiencia del usuario: el menú de la aplicación de terminal, qué hace y qué muestra cada opción, qué gráficas se generan y para qué sirven, y cómo comunica la aplicación su estado y sus errores. Las decisiones que se apoyan en este documento son D-001 y D-023 ([decisiones.md](decisiones.md)). Las ejecuciones de terminal mostradas son **maquetas ficticias**, no salidas reales. El menú está implementado en `python/src/clima_medellin/menu.py` (Fase 9), tal como se describe aquí ([implementacion.md](implementacion.md#9-menú-de-la-cli)).
 
 ## Menú principal
 
@@ -32,7 +32,7 @@ Este documento describe la experiencia del usuario: el menú de la aplicación d
 | 6 | Generar visualizaciones | Pregunta qué gráficas generar y si se muestran en ventana o se guardan como PNG | La lista de gráficas generadas y la ruta de cada PNG | `export` |
 | 7 | Salir | Termina la aplicación; opcionalmente limpia `staging/` y `exchange/` | Un mensaje de despedida | — |
 
-**Reglas comunes** [Recomendación]:
+**Reglas comunes** (implementadas en la Fase 9; con cobertura no COMPLETA, el menú muestra un `[AVISO]` y pregunta `¿Continuar de todos modos? [s/N]`):
 
 - Las opciones 3 a 6 avisan si la cobertura no es COMPLETA, pero no se bloquean: el usuario decide si continuar.
 - Con la base vacía, las opciones 3 a 6 sugieren ejecutar primero la opción 2.
@@ -88,7 +88,7 @@ La aplicación pregunta cada vez el modo (DP-10). Si no hay entorno gráfico dis
 
 ## Limitaciones y supuestos
 
-- Las maquetas y los mensajes son ilustrativos; el texto final se ajusta en las fases 8 y 9.
+- Las maquetas y los mensajes de este documento son ilustrativos; los textos exactos están en `menu.py` y se comprueban en `test_menu.py`.
 - La lista de gráficas es definitiva (Fase 8): las 8 previstas más el diagnóstico de empalmes acordado en la exploración. La matriz de correlación se mantiene aunque solapa en parte con el VIF, porque muestra además la relación de cada predictora con PM2.5.
 - El comportamiento sin pantalla se prueba con el backend Agg (`test_window_without_display_falls_back_to_png`); la ventana interactiva en el equipo del estudiante depende de que haya un backend gráfico instalado.
 - Se supone un único usuario y una sola ejecución a la vez.
